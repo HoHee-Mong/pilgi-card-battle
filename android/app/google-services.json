@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "605666289045",
+    "project_id": "pilgi-card-battle",
+    "storage_bucket": "pilgi-card-battle.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:605666289045:android:528ea3abe09c6d5f59829c",
+        "android_client_info": {
+          "package_name": "com.pilgicardbattle.pilgi_card_battle"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIsWM8GGygLF7A3M46XF_GIBf7J5asFnM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
