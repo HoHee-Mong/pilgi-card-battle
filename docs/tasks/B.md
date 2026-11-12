@@ -4,7 +4,7 @@
 - [x] A의 레포 초대 수락, clone, 실행 확인
 - [x] 패키지: flutter_animate, audioplayers, (선택) lottie
 - [x] `lib/core/theme/tokens.dart`, `app_theme.dart` — `docs/DESIGN.md` 값 그대로
-- [ ] 공용 위젯: `PressableScale`, `PrimaryButton`, `SectionCard`
+- [x] 공용 위젯: `PressableScale`, `PrimaryButton`, `SectionCard`
 - [ ] `router.dart` + 하단 탭 4개(홈/족보 노트/스터디 방/내 카드) 뼈대, 홈 레이아웃
 - [ ] A의 모델이 오기 전까지 `QuizCard.sample()` 더미로 작업
 - [ ] 모델 `Room`, `BankEntry`
