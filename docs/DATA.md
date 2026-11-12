@@ -95,6 +95,8 @@ rooms/{roomId}/answers/{round_uid}       # (B)
 - `attempt.dart` — `Attempt` (A 소유, B도 사용)
 - `room.dart` — `Room`, `RoomPlayer`, `BankEntry` (B 소유)
 - `mock_exam.dart` — `MockExam` (A 소유)
+- `model_utils.dart` — Timestamp·enum 변환 헬퍼 (A 소유). enum은 `name` 문자열로 저장한다
+- 모든 모델: 생성자 첫 인자 `id`는 문서 ID이고 `toMap()`에는 넣지 않는다. 읽을 때는 `QuizCard.fromMap(doc.id, doc.data()!)`
 
 ## 공용 위젯 계약
 - `VoteButton(roomId, cardId)` — B가 `lib/core/widgets/vote_button.dart`에 만든다. 누르면 투표/취소, 숫자 올라가는 모션 + 진동. A는 혼자 풀기·모의고사 결과 화면에서 이 위젯만 가져다 쓴다

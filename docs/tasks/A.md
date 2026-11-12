@@ -4,7 +4,7 @@
 - [x] (B와 같이) GitHub 레포 생성, B 초대, `main` 보호 설정
 - [x] `flutter create`, 패키지: firebase_core, firebase_auth, cloud_firestore, firebase_storage, firebase_ai, go_router, flutter_riverpod, image_picker, file_picker
 - [ ] Firebase 프로젝트, `flutterfire configure`, 익명 로그인, AI Logic(Gemini Developer API) 활성화
-- [ ] 모델 `QuizCard`, `Attempt`, `Subject`, `MockExam` 먼저 merge → B에게 알림
+- [x] 모델 `QuizCard`, `Attempt`, `Subject`, `MockExam` 먼저 merge → B에게 알림
 - [ ] 과목 목록·생성, 주차 선택
 - [ ] 자료 업로드: 이미지(촬영·갤러리), PDF → Storage → `sources`
 - [ ] `CardGenerator`: Gemini + JSON 스키마 → 요약 + 카드 N개(draft)
