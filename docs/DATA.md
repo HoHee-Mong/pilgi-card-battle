@@ -61,6 +61,7 @@ rooms/{roomId}                           # (B)
   questionCount: int                     # 배틀 5 | 10
   status: "waiting" | "playing" | "finished"
   players: { uid: { nickname, score, combo, ready } }
+  memberIds: [uid]                       # 들어온 적 있는 사람. "내 방 목록" arrayContains 조회용 (B 추가)
   cardIds: [string]                      # 배틀 출제 순서 (bank에서 voteCount 높은 순 우선)
   round: int                             # 현재 문제 index
   roundStartedAt: timestamp
