@@ -1,8 +1,8 @@
 # B (장선우) 작업 목록 — 위에서부터 순서대로
 
 ## 1주차
-- [ ] A의 레포 초대 수락, clone, 실행 확인
-- [ ] 패키지: flutter_animate, audioplayers, (선택) lottie
+- [x] A의 레포 초대 수락, clone, 실행 확인
+- [x] 패키지: flutter_animate, audioplayers, (선택) lottie
 - [ ] `lib/core/theme/tokens.dart`, `app_theme.dart` — `docs/DESIGN.md` 값 그대로
 - [ ] 공용 위젯: `PressableScale`, `PrimaryButton`, `SectionCard`
 - [ ] `router.dart` + 하단 탭 4개(홈/족보 노트/스터디 방/내 카드) 뼈대, 홈 레이아웃
