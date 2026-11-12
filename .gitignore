@@ -47,11 +47,10 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 
-# Secrets / Firebase native configs (Firebase 설정은 각자 flutterfire configure로 생성)
+# Secrets
 .env
 *.env
-**/google-services.json
-**/GoogleService-Info.plist
+# google-services.json / GoogleService-Info.plist 는 공개 식별자라 커밋한다 (보안은 Firestore 규칙·App Check로)
 *.keystore
 *.jks
 key.properties
