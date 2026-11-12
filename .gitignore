@@ -57,3 +57,7 @@ key.properties
 
 # Private lecture materials (샘플은 test_assets/에 직접 만든 것만)
 private/
+
+# MSW plugin이 자동 생성하는 파일 (이 프로젝트와 무관)
+AGENTS.md
+.mswai/
