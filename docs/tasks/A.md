@@ -1,8 +1,8 @@
 # A (양승호) 작업 목록 — 위에서부터 순서대로
 
 ## 1주차
-- [ ] (B와 같이) GitHub 레포 생성, B 초대, `main` 보호 설정
-- [ ] `flutter create`, 패키지: firebase_core, firebase_auth, cloud_firestore, firebase_storage, firebase_ai, go_router, flutter_riverpod, image_picker, file_picker
+- [x] (B와 같이) GitHub 레포 생성, B 초대, `main` 보호 설정
+- [x] `flutter create`, 패키지: firebase_core, firebase_auth, cloud_firestore, firebase_storage, firebase_ai, go_router, flutter_riverpod, image_picker, file_picker
 - [ ] Firebase 프로젝트, `flutterfire configure`, 익명 로그인, AI Logic(Gemini Developer API) 활성화
 - [ ] 모델 `QuizCard`, `Attempt`, `Subject`, `MockExam` 먼저 merge → B에게 알림
 - [ ] 과목 목록·생성, 주차 선택
