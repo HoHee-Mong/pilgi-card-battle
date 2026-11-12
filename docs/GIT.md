@@ -2,7 +2,7 @@
 
 ## 처음 한 번
 1. A가 GitHub에 레포 생성 → B를 Collaborator로 초대
-2. Settings → Branches → `main` 보호: PR 필수, 승인 1명
+2. Settings → Branches → `main` 보호: PR 필수, 승인 0명 (일정상 본인이 바로 merge)
 3. A가 이 문서 세트 + `flutter create`로 만든 프로젝트를 `main`에 첫 커밋
 4. 두 사람 각자 clone → `flutter pub get` → 실행 확인
 
@@ -23,7 +23,7 @@ docs: DATA.md에 emphasis 필드 추가
 ## 하루 루틴
 1. 시작: `git checkout main && git pull` → 새 브랜치
 2. 작업 → `flutter analyze` 통과 → 커밋
-3. push → PR → 상대가 리뷰(5분 안에 훑기) → Squash merge
+3. push → PR → `flutter analyze` 통과 확인 후 본인이 Squash merge → 상대에게 알림 (리뷰는 시간 날 때 merge 후에 훑기)
 4. 상대 PR이 merge되면 내 브랜치에 `git pull origin main`으로 바로 반영
 
 ## 충돌 줄이는 법
