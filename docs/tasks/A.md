@@ -2,11 +2,11 @@
 
 ## 1주차
 - [x] (B와 같이) GitHub 레포 생성, B 초대, `main` 보호 설정
-- [x] `flutter create`, 패키지: firebase_core, firebase_auth, cloud_firestore, firebase_storage, firebase_ai, go_router, flutter_riverpod, image_picker, file_picker
-- [ ] Firebase 프로젝트, `flutterfire configure`, 익명 로그인, AI Logic(Gemini Developer API) 활성화
+- [x] `flutter create`, 패키지: firebase_core, firebase_auth, cloud_firestore, firebase_ai, go_router, flutter_riverpod, image_picker, file_picker
+- [x] Firebase 프로젝트, `flutterfire configure`, 익명 로그인 + AI Logic(Gemini Developer API) 활성화 (Storage는 Blaze 필요로 미사용)
 - [x] 모델 `QuizCard`, `Attempt`, `Subject`, `MockExam` 먼저 merge → B에게 알림
 - [x] 과목 목록·생성, 주차 선택
-- [x] 자료 업로드: 이미지(촬영·갤러리), PDF → Storage → `sources`
+- [x] 자료 추가: 이미지(촬영·갤러리), PDF → 바로 Gemini → `sources`(기록만, 원본 미저장)
 - [x] `CardGenerator`: Gemini + JSON 스키마 → 요약 + 카드 N개(draft)
 - [x] 생성 옵션 화면 (카드 수, 유형)
 - [x] 검수 화면: 수정, 출처 표시, 검수 완료 / 직접 문제 쓰기
@@ -21,7 +21,7 @@
 
 ## 3주차
 - [ ] P1 버그 수정, B와 통합 테스트
-- [ ] P2: 녹음 업로드 → 전사(시간) → 요약 → 카드
+- [ ] P2: 녹음 파일(15MB 이하) → 바로 Gemini → 전사(시간) → 요약 → 카드 (Storage 미사용)
 - [ ] P2: 교수님 강조 발언 탐지 (AI 추정 / 실제 발언 / 친구 투표 구분 표시)
 - [ ] P2: 즐겨찾기, 취약 개념 TOP 3
 

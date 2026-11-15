@@ -5,20 +5,15 @@ import '../../core/models/source.dart';
 import '../../core/theme/tokens.dart';
 import '../cards/card_providers.dart';
 import '../cards/card_review_screen.dart';
-import '../cards/generate_sheet.dart';
 import 'source_providers.dart';
 import 'source_tile.dart';
 
-/// 자료 하나: 상태, 요약, 카드 뽑기, 만든 카드 검수로 이동.
+/// 자료 하나: 상태, 요약, 만든 카드 검수로 이동.
+/// 원본을 저장하지 않으므로 "다시 뽑기"는 없다. 더 뽑으려면 자료를 다시 올린다.
 class SourceDetailScreen extends ConsumerWidget {
-  const SourceDetailScreen({
-    super.key,
-    required this.sourceId,
-    required this.subjectName,
-  });
+  const SourceDetailScreen({super.key, required this.sourceId});
 
   final String sourceId;
-  final String subjectName;
 
   Future<void> _delete(
     BuildContext context,
@@ -28,7 +23,7 @@ class SourceDetailScreen extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('자료를 지울까요?'),
+        title: const Text('자료 기록을 지울까요?'),
         content: const Text('이 자료로 만든 카드는 그대로 남아요.'),
         actions: [
           TextButton(
@@ -45,18 +40,6 @@ class SourceDetailScreen extends ConsumerWidget {
     if (ok != true) return;
     await ref.read(sourceRepositoryProvider).delete(source);
     if (context.mounted) Navigator.of(context).pop();
-  }
-
-  Future<void> _generate(BuildContext context, StudySource source) async {
-    final made = await showGenerateSheet(
-      context,
-      source: source,
-      subjectName: subjectName,
-    );
-    if (made == null || !context.mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('카드 $made장을 만들었어요. 검수해 주세요.')));
-    _openReview(context, source);
   }
 
   void _openReview(BuildContext context, StudySource source) {
@@ -88,7 +71,6 @@ class SourceDetailScreen extends ConsumerWidget {
             body: const Center(child: Text('지워진 자료예요')),
           );
         }
-        final busy = source.isProcessing;
         return Scaffold(
           appBar: AppBar(
             actions: [
@@ -134,41 +116,40 @@ class SourceDetailScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(AppRadius.card),
                 ),
                 child: Text(
-                  source.summary ?? '아직 분석 전이에요. 아래에서 카드를 뽑으면 요약도 같이 만들어요.',
+                  source.summary ??
+                      (source.isProcessing
+                          ? '분석 중이에요…'
+                          : source.isFailed
+                          ? '카드를 만들지 못했어요. 자료를 다시 올려 주세요.'
+                          : '요약이 없어요.'),
                   style: source.summary == null
                       ? AppTextStyles.body.copyWith(color: AppColors.inkSub)
                       : AppTextStyles.body,
                 ),
               ),
               const SizedBox(height: AppSpacing.section),
-              if (cards.isNotEmpty) ...[
+              if (cards.isNotEmpty)
                 SizedBox(
                   height: 52,
-                  child: OutlinedButton.icon(
+                  child: FilledButton.icon(
                     onPressed: () => _openReview(context, source),
                     icon: const Icon(Icons.fact_check_outlined),
                     label: Text(
                       draftCount > 0
-                          ? '카드 ${cards.length}장 보기 · 초안 $draftCount'
+                          ? '카드 ${cards.length}장 검수하기 · 초안 $draftCount'
                           : '카드 ${cards.length}장 보기',
                     ),
                   ),
+                )
+              else if (!source.isProcessing)
+                Text(
+                  '이 자료로 만든 카드가 없어요.',
+                  style: AppTextStyles.body.copyWith(color: AppColors.inkSub),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-              SizedBox(
-                height: 52,
-                child: FilledButton.icon(
-                  onPressed: busy ? null : () => _generate(context, source),
-                  icon: const Icon(Icons.auto_awesome_outlined),
-                  label: Text(
-                    busy
-                        ? '분석 중…'
-                        : cards.isEmpty
-                        ? '이 자료로 카드 뽑기'
-                        : '카드 더 뽑기',
-                  ),
-                ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                '원본 파일은 저장하지 않아요. 카드를 더 뽑으려면 주차 화면에서 자료를 다시 올려 주세요.',
+                style: AppTextStyles.caption,
               ),
             ],
           ),
