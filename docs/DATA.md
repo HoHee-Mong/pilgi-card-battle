@@ -93,6 +93,7 @@ rooms/{roomId}/answers/{round_uid}       # (B)
 ## Dart 공용 모델 (`lib/core/models/`)
 - `card.dart` — `QuizCard` (A 소유). 위 `cards` 필드와 1:1, `fromMap`/`toMap`
 - `subject.dart` — `Subject` (A 소유)
+- `source.dart` — `StudySource` (A 소유). 클래스 이름은 cloud_firestore의 `Source`와 겹쳐서 `StudySource`
 - `attempt.dart` — `Attempt` (A 소유, B도 사용)
 - `room.dart` — `Room`, `RoomPlayer`, `BankEntry` (B 소유)
 - `mock_exam.dart` — `MockExam` (A 소유)

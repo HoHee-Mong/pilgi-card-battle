@@ -6,7 +6,7 @@
 - [ ] Firebase 프로젝트, `flutterfire configure`, 익명 로그인, AI Logic(Gemini Developer API) 활성화
 - [x] 모델 `QuizCard`, `Attempt`, `Subject`, `MockExam` 먼저 merge → B에게 알림
 - [x] 과목 목록·생성, 주차 선택
-- [ ] 자료 업로드: 이미지(촬영·갤러리), PDF → Storage → `sources`
+- [x] 자료 업로드: 이미지(촬영·갤러리), PDF → Storage → `sources`
 - [ ] `CardGenerator`: Gemini + JSON 스키마 → 요약 + 카드 N개(draft)
 - [ ] 생성 옵션 화면 (카드 수, 유형)
 - [ ] 검수 화면: 수정, 출처 표시, 검수 완료 / 직접 문제 쓰기
