@@ -31,8 +31,8 @@ class SubjectListScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('내 과목')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _create(context),
-        backgroundColor: AppColors.ink,
-        foregroundColor: AppColors.surface,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.button),
@@ -73,7 +73,7 @@ class _SubjectTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final dday = examDDayLabel(subject.examDate);
     return Material(
-      color: AppColors.surface,
+      color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(AppRadius.card),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.card),
@@ -97,7 +97,7 @@ class _SubjectTile extends StatelessWidget {
                       style: AppTextStyles.caption.copyWith(
                         color: dday == null
                             ? AppColors.inkSub
-                            : AppColors.blueText,
+                            : Theme.of(context).colorScheme.secondary,
                       ),
                     ),
                   ],

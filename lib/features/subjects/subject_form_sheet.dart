@@ -15,7 +15,7 @@ Future<Subject?> showSubjectFormSheet(
   return showModalBottomSheet<Subject>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.surface,
+    backgroundColor: Theme.of(context).colorScheme.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.card)),
     ),
@@ -70,9 +70,8 @@ class _SubjectFormSheetState extends ConsumerState<_SubjectFormSheet> {
     if (name.isEmpty || _saving) return;
     final uid = ref.read(uidProvider);
     if (uid == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('로그인 정보를 불러오지 못했어요')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('로그인 정보를 불러오지 못했어요')));
       return;
     }
     setState(() => _saving = true);
@@ -98,9 +97,8 @@ class _SubjectFormSheetState extends ConsumerState<_SubjectFormSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('저장하지 못했어요: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('저장하지 못했어요: $e')));
     }
   }
 

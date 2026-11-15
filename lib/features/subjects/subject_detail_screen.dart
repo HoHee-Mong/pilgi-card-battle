@@ -166,7 +166,7 @@ class _WeekGrid extends StatelessWidget {
       itemBuilder: (_, i) {
         final week = i + 1;
         return Material(
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppRadius.button),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.button),

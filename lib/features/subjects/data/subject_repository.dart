@@ -24,9 +24,10 @@ class SubjectRepository {
   }
 
   Stream<Subject?> watch(String id) {
-    return _col.doc(id).snapshots().map(
-      (d) => d.exists ? Subject.fromMap(d.id, d.data()!) : null,
-    );
+    return _col
+        .doc(id)
+        .snapshots()
+        .map((d) => d.exists ? Subject.fromMap(d.id, d.data()!) : null);
   }
 
   Future<Subject> create({

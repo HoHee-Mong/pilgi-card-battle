@@ -29,7 +29,7 @@ class WeekScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.page),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(AppRadius.card),
             ),
             child: Column(
