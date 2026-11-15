@@ -3,14 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/source.dart';
 import '../../core/theme/tokens.dart';
+import '../cards/card_providers.dart';
+import '../cards/card_review_screen.dart';
+import '../cards/generate_sheet.dart';
 import 'source_providers.dart';
 import 'source_tile.dart';
 
-/// 자료 하나: 상태, 요약, 카드 뽑기 진입. 카드 생성은 A 작업 7·8번에서 붙인다.
+/// 자료 하나: 상태, 요약, 카드 뽑기, 만든 카드 검수로 이동.
 class SourceDetailScreen extends ConsumerWidget {
-  const SourceDetailScreen({super.key, required this.sourceId});
+  const SourceDetailScreen({
+    super.key,
+    required this.sourceId,
+    required this.subjectName,
+  });
 
   final String sourceId;
+  final String subjectName;
 
   Future<void> _delete(
     BuildContext context,
@@ -39,9 +47,33 @@ class SourceDetailScreen extends ConsumerWidget {
     if (context.mounted) Navigator.of(context).pop();
   }
 
+  Future<void> _generate(BuildContext context, StudySource source) async {
+    final made = await showGenerateSheet(
+      context,
+      source: source,
+      subjectName: subjectName,
+    );
+    if (made == null || !context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('카드 $made장을 만들었어요. 검수해 주세요.')));
+    _openReview(context, source);
+  }
+
+  void _openReview(BuildContext context, StudySource source) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            CardReviewScreen(sourceId: source.id, title: source.fileName),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(sourceProvider(sourceId));
+    final cards = ref.watch(sourceCardsProvider(sourceId)).value ?? const [];
+    final draftCount = cards.where((c) => !c.isVerified).length;
+
     return async.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -56,6 +88,7 @@ class SourceDetailScreen extends ConsumerWidget {
             body: const Center(child: Text('지워진 자료예요')),
           );
         }
+        final busy = source.isProcessing;
         return Scaffold(
           appBar: AppBar(
             actions: [
@@ -108,15 +141,33 @@ class SourceDetailScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.section),
+              if (cards.isNotEmpty) ...[
+                SizedBox(
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openReview(context, source),
+                    icon: const Icon(Icons.fact_check_outlined),
+                    label: Text(
+                      draftCount > 0
+                          ? '카드 ${cards.length}장 보기 · 초안 $draftCount'
+                          : '카드 ${cards.length}장 보기',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
               SizedBox(
                 height: 52,
                 child: FilledButton.icon(
-                  // TODO(A-7): CardGenerator 연결
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('카드 뽑기는 다음 작업에서 연결돼요')),
-                  ),
+                  onPressed: busy ? null : () => _generate(context, source),
                   icon: const Icon(Icons.auto_awesome_outlined),
-                  label: const Text('이 자료로 카드 뽑기'),
+                  label: Text(
+                    busy
+                        ? '분석 중…'
+                        : cards.isEmpty
+                        ? '이 자료로 카드 뽑기'
+                        : '카드 더 뽑기',
+                  ),
                 ),
               ),
             ],

@@ -6,9 +6,12 @@ import '../../core/theme/tokens.dart';
 import '../sources/source_detail_screen.dart';
 import '../sources/source_providers.dart';
 import '../sources/source_tile.dart';
+import '../cards/card_edit_screen.dart';
+import '../cards/card_list_tile.dart';
+import '../cards/card_providers.dart';
 import '../sources/upload_sheet.dart';
 
-/// 과목의 한 주차. 자료 목록·업로드. 카드 목록은 족보 노트(A 작업 12번)에서.
+/// 과목의 한 주차. 자료 목록·업로드, 직접 문제 쓰기, 이 주차 카드.
 class WeekScreen extends ConsumerWidget {
   const WeekScreen({super.key, required this.subject, required this.week});
 
@@ -27,7 +30,10 @@ class WeekScreen extends ConsumerWidget {
     if (uploaded.length == 1) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => SourceDetailScreen(sourceId: uploaded.single.id),
+          builder: (_) => SourceDetailScreen(
+            sourceId: uploaded.single.id,
+            subjectName: subject.name,
+          ),
         ),
       );
     }
@@ -37,6 +43,9 @@ class WeekScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sources = ref.watch(
       weekSourcesProvider((subjectId: subject.id, week: week)),
+    );
+    final cards = ref.watch(
+      myCardsProvider((subjectId: subject.id, week: week)),
     );
 
     return Scaffold(
@@ -82,7 +91,10 @@ class WeekScreen extends ConsumerWidget {
                       source: s,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => SourceDetailScreen(sourceId: s.id),
+                          builder: (_) => SourceDetailScreen(
+                            sourceId: s.id,
+                            subjectName: subject.name,
+                          ),
                         ),
                       ),
                     ),
@@ -91,6 +103,49 @@ class WeekScreen extends ConsumerWidget {
                 ],
               );
             },
+          ),
+          const SizedBox(height: AppSpacing.section),
+          Row(
+            children: [
+              const Expanded(child: Text('카드', style: AppTextStyles.heading)),
+              TextButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CardEditScreen.create(
+                      subjectId: subject.id,
+                      week: week,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('직접 쓰기'),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          cards.when(
+            loading: () => const SizedBox.shrink(),
+            error: (e, _) => Text('$e', style: AppTextStyles.caption),
+            data: (list) => list.isEmpty
+                ? Text(
+                    '아직 카드가 없어요. 자료를 올려 뽑거나 직접 써 보세요.',
+                    style: AppTextStyles.body.copyWith(color: AppColors.inkSub),
+                  )
+                : Column(
+                    children: [
+                      for (final c in list) ...[
+                        CardListTile(
+                          card: c,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => CardEditScreen.edit(card: c),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
+                    ],
+                  ),
           ),
         ],
       ),

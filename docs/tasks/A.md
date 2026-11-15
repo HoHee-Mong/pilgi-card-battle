@@ -7,9 +7,9 @@
 - [x] 모델 `QuizCard`, `Attempt`, `Subject`, `MockExam` 먼저 merge → B에게 알림
 - [x] 과목 목록·생성, 주차 선택
 - [x] 자료 업로드: 이미지(촬영·갤러리), PDF → Storage → `sources`
-- [ ] `CardGenerator`: Gemini + JSON 스키마 → 요약 + 카드 N개(draft)
-- [ ] 생성 옵션 화면 (카드 수, 유형)
-- [ ] 검수 화면: 수정, 출처 표시, 검수 완료 / 직접 문제 쓰기
+- [x] `CardGenerator`: Gemini + JSON 스키마 → 요약 + 카드 N개(draft)
+- [x] 생성 옵션 화면 (카드 수, 유형)
+- [x] 검수 화면: 수정, 출처 표시, 검수 완료 / 직접 문제 쓰기
 - [ ] 카드 "방에 공유" 버튼 (B의 `BankRepository.addCard`)
 
 ## 2주차
