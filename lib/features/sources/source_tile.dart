@@ -10,7 +10,7 @@ IconData sourceIcon(SourceKind kind) => switch (kind) {
 };
 
 String sourceStatusLabel(SourceStatus status) => switch (status) {
-  SourceStatus.uploaded => '올림',
+  SourceStatus.uploaded => '대기',
   SourceStatus.processing => '분석 중',
   SourceStatus.done => '카드 완료',
   SourceStatus.failed => '실패',

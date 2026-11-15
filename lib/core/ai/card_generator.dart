@@ -28,6 +28,15 @@ class GeneratedCard {
   final String sourceHint;
 }
 
+/// Gemini로 바로 보내는 파일 하나.
+class InlineFile {
+  const InlineFile({required this.mimeType, required this.bytes});
+
+  /// 예: "image/jpeg", "application/pdf", "audio/mp4"
+  final String mimeType;
+  final Uint8List bytes;
+}
+
 class GenerationResult {
   const GenerationResult({required this.summary, required this.cards});
 
@@ -118,7 +127,7 @@ class CardGenerator {
         .map((t) => '${t.name}=${typeLabel(t)}')
         .join(', ');
     return '''
-너는 대학 시험 출제 보조다. 첨부한 자료는 "$subjectName" 과목 $week주차의 필기 사진 또는 강의자료다.
+너는 대학 시험 출제 보조다. 첨부한 자료(여러 장일 수 있다)는 "$subjectName" 과목 $week주차의 필기 사진 또는 강의자료다.
 
 할 일:
 1. 자료의 핵심을 한국어 3~5문장으로 요약한다 (summary).
@@ -137,14 +146,17 @@ class CardGenerator {
 ''';
   }
 
-  /// [bytes]는 이미지(jpeg/png) 또는 PDF. [mimeType] 예: "image/jpeg", "application/pdf".
+  /// [files]는 이미지(jpeg/png)·PDF·(P2) 오디오. 사진 여러 장은 한 요청에 같이 보낸다.
+  /// 원본은 어디에도 저장하지 않고 기기에서 바로 보낸다 (Storage 미사용).
   Future<GenerationResult> generate({
-    required Uint8List bytes,
-    required String mimeType,
+    required List<InlineFile> files,
     required String subjectName,
     required int week,
     CardGenerateOptions options = const CardGenerateOptions(),
   }) async {
+    if (files.isEmpty) {
+      throw const CardGenerationException('보낼 자료가 없어요.');
+    }
     if (options.types.isEmpty) {
       throw const CardGenerationException('문제 유형을 하나 이상 골라 주세요.');
     }
@@ -156,7 +168,10 @@ class CardGenerator {
     GenerateContentResponse response;
     try {
       response = await _model.generateContent([
-        Content.multi([TextPart(prompt), InlineDataPart(mimeType, bytes)]),
+        Content.multi([
+          TextPart(prompt),
+          for (final f in files) InlineDataPart(f.mimeType, f.bytes),
+        ]),
       ]);
     } on FirebaseAIException catch (e) {
       throw CardGenerationException('AI 호출에 실패했어요: ${e.message}');

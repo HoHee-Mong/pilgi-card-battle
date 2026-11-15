@@ -3,7 +3,7 @@
 **우리가 만드는 시험문제.** 필기·강의자료·녹음을 AI가 퀴즈 카드로 만들고, 같이 공부하는 친구들이 "나올 것 같아요"를 누른 문제를 모아 모의고사로 풀어 보는 Flutter 앱.
 
 - 팀: 양승호(A), 장선우(B)
-- 기술: Flutter, Firebase(Auth·Firestore·Storage·AI Logic/Gemini)
+- 기술: Flutter, Firebase(Auth·Firestore·AI Logic/Gemini). Storage 미사용
 
 ## 문서
 | 문서 | 내용 |

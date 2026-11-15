@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/auth/auth_providers.dart';
@@ -7,8 +6,7 @@ import '../../core/models/source.dart';
 import 'data/source_repository.dart';
 
 final sourceRepositoryProvider = Provider<SourceRepository>(
-  (ref) =>
-      SourceRepository(FirebaseFirestore.instance, FirebaseStorage.instance),
+  (ref) => SourceRepository(FirebaseFirestore.instance),
 );
 
 /// 과목·주차 하나의 자료 목록. 로그인 전이면 빈 목록.

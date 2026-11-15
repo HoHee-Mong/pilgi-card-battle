@@ -1,6 +1,6 @@
 # 데이터 구조와 공용 모델 (A·B 공통 계약)
 
-Firebase: Auth(익명 로그인 + 닉네임), Firestore, Storage, AI Logic(`firebase_ai`, Gemini).
+Firebase: Auth(익명 로그인 + 닉네임), Firestore, AI Logic(`firebase_ai`, Gemini). **Storage는 쓰지 않는다**(Blaze 요금제 필요) — 자료 파일은 기기에서 바로 Gemini로 보내고 원본은 저장하지 않는다.
 
 규칙: 필드는 **추가만** 한다. 삭제·이름 변경은 두 사람이 합의한 뒤 이 문서와 모델을 같이 고친다.
 
@@ -31,10 +31,11 @@ sources/{sourceId}                       # 업로드 원본 (A), 항상 비공�
   ownerId, subjectId: string
   week: int
   kind: "image" | "pdf" | "audio"
-  fileName, storagePath: string
-  status: "uploaded" | "processing" | "done" | "failed"
+  fileName: string
+  storagePath: string                    # 사용 안 함(Storage 미사용). 저장하지 않는다
+  status: "processing" | "done" | "failed"   # ("uploaded"는 옛 값, 읽기만 호환)
   summary: string?                       # 핵심 요약
-  transcript: [{ t: int(초), text }]?    # 녹음일 때 (P2)
+  transcript: [{ t: int(초), text }]?    # 녹음일 때 (P2). 녹음 파일도 저장하지 않고 15MB 안에서 바로 Gemini로 보낸다
   emphasis: [{ t: int(초), quote }]?     # 교수님 강조 발언 (P2)
   createdAt: timestamp
 

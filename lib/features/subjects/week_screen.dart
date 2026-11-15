@@ -9,7 +9,7 @@ import '../sources/source_tile.dart';
 import '../cards/card_edit_screen.dart';
 import '../cards/card_list_tile.dart';
 import '../cards/card_providers.dart';
-import '../sources/upload_sheet.dart';
+import '../sources/add_source_sheet.dart';
 
 /// 과목의 한 주차. 자료 목록·업로드, 직접 문제 쓰기, 이 주차 카드.
 class WeekScreen extends ConsumerWidget {
@@ -19,21 +19,20 @@ class WeekScreen extends ConsumerWidget {
   final int week;
 
   Future<void> _upload(BuildContext context) async {
-    final uploaded = await showUploadSheet(
+    final uploaded = await showAddSourceSheet(
       context,
       subjectId: subject.id,
+      subjectName: subject.name,
       week: week,
     );
     if (uploaded.isEmpty || !context.mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('${uploaded.length}개 올렸어요')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('자료 ${uploaded.length}개로 카드를 만들었어요. 검수해 주세요.')),
+    );
     if (uploaded.length == 1) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => SourceDetailScreen(
-            sourceId: uploaded.single.id,
-            subjectName: subject.name,
-          ),
+          builder: (_) => SourceDetailScreen(sourceId: uploaded.single.id),
         ),
       );
     }
@@ -91,10 +90,7 @@ class WeekScreen extends ConsumerWidget {
                       source: s,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => SourceDetailScreen(
-                            sourceId: s.id,
-                            subjectName: subject.name,
-                          ),
+                          builder: (_) => SourceDetailScreen(sourceId: s.id),
                         ),
                       ),
                     ),
