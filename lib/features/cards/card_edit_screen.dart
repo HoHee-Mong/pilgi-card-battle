@@ -7,6 +7,7 @@ import '../../core/auth/user_profile.dart';
 import '../../core/models/card.dart';
 import '../../core/theme/tokens.dart';
 import 'card_providers.dart';
+import 'share_to_room_sheet.dart';
 
 /// 카드 검수·수정, 또는 직접 문제 쓰기.
 /// [card]가 있으면 수정 모드. 없으면 [subjectId]·[week]로 새 카드를 만든다.
@@ -186,6 +187,11 @@ class _CardEditScreenState extends ConsumerState<CardEditScreen> {
     if (mounted) Navigator.of(context).pop(true);
   }
 
+  Future<void> _share(QuizCard card) async {
+    final roomId = await showShareToRoomSheet(context, card: card);
+    if (roomId != null && mounted) Navigator.of(context).pop(true);
+  }
+
   void _toast(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -297,6 +303,21 @@ class _CardEditScreenState extends ConsumerState<CardEditScreen> {
               child: const Text('초안으로 저장'),
             ),
           ),
+          if (card != null && card.isVerified) ...[
+            const SizedBox(height: AppSpacing.section),
+            SizedBox(
+              height: 52,
+              child: OutlinedButton.icon(
+                onPressed: _saving ? null : () => _share(card),
+                icon: const Icon(Icons.group_add_outlined),
+                label: Text(
+                  card.roomIds.isEmpty
+                      ? '방에 공유'
+                      : '방에 공유 (${card.roomIds.length}곳에 공유됨)',
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
