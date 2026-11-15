@@ -15,6 +15,7 @@
 | `docs/GIT.md` | 브랜치·커밋·PR 규칙 |
 | `docs/DESIGN.md` | 디자인 토큰, 모션 규칙 |
 | `docs/SCHEDULE.md` | 개발 일정 |
+| `docs/PROMPTS.md` | Claude Code에 보낼 명령어·지시문 |
 | `docs/tasks/A.md`, `B.md` | 역할별 작업 목록 |
 
 ## Claude Code로 시작하기

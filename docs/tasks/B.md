@@ -4,8 +4,8 @@
 - [x] A의 레포 초대 수락, clone, 실행 확인
 - [x] 패키지: flutter_animate, audioplayers, (선택) lottie
 - [x] `lib/core/theme/tokens.dart`, `app_theme.dart` — `docs/DESIGN.md` 값 그대로
-- [x] 공용 위젯: `PressableScale`, `PrimaryButton`, `SectionCard`
-- [ ] `router.dart` + 하단 탭 4개(홈/족보 노트/스터디 방/내 카드) 뼈대, 홈 레이아웃
+- [ ] 공용 위젯: `ChunkyButton`(눌림 4px), `ChunkyCard`, `StatChip`, `BossSprite`(시험지 보스, 둥둥 모션)
+- [ ] `router.dart` + 하단 탭 4개(로비/문제은행/모의고사/내 카드) 뼈대, 로비 레이아웃
 - [ ] A의 모델이 오기 전까지 `QuizCard.sample()` 더미로 작업
 - [x] 모델 `Room`, `BankEntry`
 - [ ] 방 만들기(과목 선택) → 6자리 초대 코드 → 코드로 입장
@@ -26,6 +26,10 @@
 - [ ] 사운드 on/off, 태블릿 폭 점검
 - [ ] P1 버그 수정, A와 통합 테스트
 - [ ] P2: 같은 방 모의고사 점수 비교, 투표 기여도("예상 적중왕")
+- [ ] P2: 레벨·XP, 연속 출석, 오늘의 퀘스트, 결과 랭크
 
 ## P3 — P1·P2 끝난 뒤
 - [ ] 3~8인 배틀, 보스전, 약점 공략 배틀, 고대 문자 카드·희귀도 연출
+
+## 이전 완료 항목 (UPDATE-001로 대체됨)
+- [x] 공용 위젯: `PressableScale`, `PrimaryButton`, `SectionCard` → `ChunkyButton`·`ChunkyCard`로 대체
