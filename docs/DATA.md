@@ -100,6 +100,7 @@ rooms/{roomId}/answers/{round_uid}       # (B)
 - 모든 모델: 생성자 첫 인자 `id`는 문서 ID이고 `toMap()`에는 넣지 않는다. 읽을 때는 `QuizCard.fromMap(doc.id, doc.data()!)`
 
 ## 공용 위젯 계약
+- `ChunkyButton`, `ChunkyCard`, `BossSprite(hp, maxHp)` + `hit()`/`miss()` — B가 만든다. A의 모의고사·검수 화면도 이 위젯으로 만든다
 - `VoteButton(roomId, cardId)` — B가 `lib/core/widgets/vote_button.dart`에 만든다. 누르면 투표/취소, 숫자 올라가는 모션 + 진동. A는 혼자 풀기·모의고사 결과 화면에서 이 위젯만 가져다 쓴다
 - `BankRepository.topVoted(roomId, weeks, limit)` — B가 만든다. A의 모의고사가 문항을 뽑을 때 사용
 
