@@ -18,6 +18,7 @@ import '../bank/upload_cards_sheet.dart';
 import 'battle_help_sheet.dart';
 import 'battle_repository.dart';
 import 'battle_view.dart';
+import 'practice_screen.dart';
 
 final _roomProvider = StreamProvider.autoDispose.family<Room?, String>(
   (ref, roomId) => ref.watch(roomRepositoryProvider).watchRoom(roomId),
@@ -269,6 +270,17 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
                       style: AppTextStyles.label.copyWith(
                         color: AppColors.cream,
                       ),
+                    ),
+                  ),
+                // 친구를 기다리는 동안 (기록·XP 없음)
+                if (pickable > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: ChunkyButton(
+                      label: '기다리는 동안 혼자 연습',
+                      icon: Icons.sports_esports_rounded,
+                      color: AppColors.paper,
+                      onPressed: () => openPractice(context, widget.roomId),
                     ),
                   ),
                 if (isHost)

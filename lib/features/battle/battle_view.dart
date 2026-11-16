@@ -284,7 +284,9 @@ class _BattleViewState extends ConsumerState<BattleView> {
         ],
         const SizedBox(height: AppSpacing.section),
         if (phase == RoundPhase.countdown)
-          _Countdown(left: BattleRules.countdown.inSeconds - _elapsed.inSeconds)
+          BattleCountdown(
+            left: BattleRules.countdown.inSeconds - _elapsed.inSeconds,
+          )
         else ...[
           // 문제가 바뀔 때마다 카드가 뒤집히며 나타나고, 틀리면 흔들린다
           FlipIn(
@@ -298,7 +300,7 @@ class _BattleViewState extends ConsumerState<BattleView> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          _AnswerArea(
+          BattleAnswerArea(
             card: card,
             phase: phase,
             myChoice: _myChoice,
@@ -416,8 +418,8 @@ class ScoreBars extends StatelessWidget {
   }
 }
 
-class _Countdown extends StatelessWidget {
-  const _Countdown({required this.left});
+class BattleCountdown extends StatelessWidget {
+  const BattleCountdown({super.key, required this.left});
   final int left;
 
   @override
@@ -448,8 +450,9 @@ class _Countdown extends StatelessWidget {
 }
 
 /// 유형별 답 고르기. 정답 공개 때 정답은 lime, 내가 고른 오답은 wrong 색.
-class _AnswerArea extends StatelessWidget {
-  const _AnswerArea({
+class BattleAnswerArea extends StatelessWidget {
+  const BattleAnswerArea({
+    super.key,
     required this.card,
     required this.phase,
     required this.myChoice,
