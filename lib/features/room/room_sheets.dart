@@ -484,6 +484,7 @@ class _RoomPicker extends ConsumerWidget {
                     color: AppColors.ink,
                     onPressed: () => showInviteCodeSheet(context, room),
                   ),
+                  _RoomMenu(room: room),
                 ],
               ),
             ),
@@ -493,6 +494,97 @@ class _RoomPicker extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// 방 하나의 더보기: 방 나가기, (방장) 방 지우기
+class _RoomMenu extends ConsumerWidget {
+  const _RoomMenu({required this.room});
+  final Room room;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final uid = ref.watch(uidProvider);
+    final isHost = uid != null && room.isHost(uid);
+    return PopupMenuButton<_RoomAction>(
+      tooltip: '방 설정',
+      icon: const Icon(Icons.more_vert_rounded, color: AppColors.ink),
+      color: AppColors.paper,
+      onSelected: (a) => _run(context, ref, a),
+      itemBuilder: (_) => [
+        const PopupMenuItem(value: _RoomAction.leave, child: Text('방 나가기')),
+        if (isHost)
+          const PopupMenuItem(value: _RoomAction.delete, child: Text('방 지우기')),
+      ],
+    );
+  }
+
+  Future<void> _run(BuildContext context, WidgetRef ref, _RoomAction a) async {
+    final uid = ref.read(uidProvider);
+    if (uid == null) return;
+    final leave = a == _RoomAction.leave;
+    final alone = room.memberIds.length <= 1;
+    final ok = await _confirm(
+      context,
+      title: leave ? '"${room.name}"에서 나갈까요?' : '"${room.name}"을 지울까요?',
+      body: leave
+          ? alone
+                ? '마지막 멤버라 나가면 방이 지워져요. 문제은행·투표 기록도 같이 사라져요.'
+                : '다시 들어오려면 초대 코드가 필요해요. 내가 올린 문제와 투표는 방에 남아요.'
+          : '모든 친구에게서 방이 사라지고, 문제은행·투표·배틀·모의고사 기록도 지워져요. '
+                '각자의 카드는 남아요.',
+      action: leave ? '나가기' : '지우기',
+    );
+    if (ok != true) return;
+    Haptics.medium();
+    final repo = ref.read(roomRepositoryProvider);
+    try {
+      if (leave) {
+        await repo.leaveRoom(roomId: room.id, uid: uid);
+      } else {
+        await repo.deleteRoom(roomId: room.id, uid: uid);
+      }
+      if (context.mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e is RoomException ? e.message : '잠시 후 다시 해 주세요.'),
+        ),
+      );
+    }
+  }
+}
+
+enum _RoomAction { leave, delete }
+
+Future<bool?> _confirm(
+  BuildContext context, {
+  required String title,
+  required String body,
+  required String action,
+}) {
+  return showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.paper,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        side: const BorderSide(color: AppColors.ink, width: AppBlock.border),
+      ),
+      title: Text(title, style: AppTextStyles.heading),
+      content: Text(body, style: AppTextStyles.bodyS),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('그대로 두기'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(action),
+        ),
+      ],
+    ),
+  );
 }
 
 /// "방 만들기" + "코드로 입장" 두 버튼. 문제은행 빈 화면·방 고르기에서 같이 쓴다.
