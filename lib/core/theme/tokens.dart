@@ -247,6 +247,9 @@ abstract final class AppMotion {
   static const shake = Duration(milliseconds: 420);
   static const shakeDistance = 10.0;
 
+  /// 결과 랭크 뒤 별 한 바퀴
+  static const starSpin = Duration(seconds: 12);
+
   /// 1위 왕관 살랑
   static const crownSway = Duration(milliseconds: 1800);
 

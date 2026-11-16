@@ -11,7 +11,10 @@ import '../../core/widgets/chunky_card.dart';
 import '../../core/widgets/outlined_text.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../../core/widgets/vote_button.dart';
+import '../../core/widgets/rank_stamp.dart';
 import '../../fx/sound.dart';
+import '../room/progress_repository.dart';
+import '../room/progress_rules.dart';
 import 'battle_repository.dart';
 
 final _myAnswersProvider = StreamProvider.autoDispose
@@ -79,6 +82,10 @@ class BattleResult extends ConsumerStatefulWidget {
 class _BattleResultState extends ConsumerState<BattleResult> {
   bool _saved = false;
 
+  /// 이번 판으로 받은 XP (저장되면 채워짐)
+  int? _gainedXp;
+  bool _xpRequested = false;
+
   @override
   void initState() {
     super.initState();
@@ -101,6 +108,16 @@ class _BattleResultState extends ConsumerState<BattleResult> {
           cardIds: widget.room.cardIds,
         )
         .catchError((_) => _saved = false);
+    // XP: 한 판 기본 + 점수 100점당 1 (퀘스트 "배틀 1판" 포함). 저장 재시도와 별개로 한 번만.
+    if (_gainedXp != null || _xpRequested) return;
+    _xpRequested = true;
+    final myScore = widget.room.players[widget.myUid]?.score ?? 0;
+    ref
+        .read(progressRepositoryProvider)
+        .record(widget.myUid, XpEvent.battle, bonusXp: myScore ~/ 100)
+        .then((xp) {
+          if (mounted) setState(() => _gainedXp = xp);
+        });
   }
 
   @override
@@ -127,14 +144,12 @@ class _BattleResultState extends ConsumerState<BattleResult> {
         bottom: AppSpacing.section * 2,
       ),
       children: [
+        Center(child: RankStamp(rank: resultRank(summary.percent))),
         Center(
           child:
               OutlinedText(
                 myRank == 1 ? '우승!' : '$myRank위',
                 color: myRank == 1 ? AppColors.pink : AppColors.paper,
-                style: AppTextStyles.titleL.copyWith(
-                  fontSize: AppSpacing.minTouch * 1.4,
-                ),
               ).animate().scaleXY(
                 begin: 2,
                 end: 1,
@@ -144,7 +159,7 @@ class _BattleResultState extends ConsumerState<BattleResult> {
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          '${room.name} 배틀 $total문제',
+          '${room.name} 배틀 $total문제 · 정답률 ${summary.percent}%',
           textAlign: TextAlign.center,
           style: AppTextStyles.label.copyWith(color: AppColors.ink),
         ),
@@ -161,16 +176,16 @@ class _BattleResultState extends ConsumerState<BattleResult> {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _StatTile(
-                value: '${summary.percent}%',
-                label: '정답률',
+                value: 'x${summary.bestCombo}',
+                label: '최고 콤보',
                 color: AppColors.lime,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _StatTile(
-                value: 'x${summary.bestCombo}',
-                label: '최고 콤보',
+                value: _gainedXp == null ? '…' : '+$_gainedXp',
+                label: '획득 XP',
                 color: AppColors.cyan,
               ),
             ),

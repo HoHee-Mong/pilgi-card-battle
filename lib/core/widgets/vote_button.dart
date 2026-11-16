@@ -4,6 +4,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/bank/bank_repository.dart';
+import '../../features/room/progress_repository.dart';
+import '../../features/room/progress_rules.dart';
 import '../../fx/haptics.dart';
 import '../../fx/sound.dart';
 import '../models/room.dart';
@@ -77,7 +79,11 @@ class _VoteButtonState extends ConsumerState<VoteButton> {
       _pendingCount = entry.voteCount + (votedNow ? 1 : -1);
     });
     Haptics.light();
-    if (votedNow) Sound.play(Sfx.vote);
+    if (votedNow) {
+      Sound.play(Sfx.vote);
+      // XP·오늘의 퀘스트 (실패해도 투표는 그대로)
+      ref.read(progressRepositoryProvider).record(uid, XpEvent.vote).ignore();
+    }
     try {
       await ref
           .read(bankRepositoryProvider)
