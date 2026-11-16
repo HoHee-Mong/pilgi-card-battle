@@ -6,6 +6,7 @@ import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_button.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../subjects/arcade_app_bar.dart';
+import '../subjects/arcade_dialog.dart';
 import 'card_edit_screen.dart';
 import 'card_list_tile.dart';
 import 'card_providers.dart';
@@ -27,24 +28,14 @@ class CardReviewScreen extends ConsumerWidget {
     WidgetRef ref,
     List<QuizCard> drafts,
   ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('초안 ${drafts.length}장을 모두 검수 완료로 바꿀까요?'),
-        content: const Text('AI가 만든 문제는 틀릴 수 있어요. 한 장씩 보고 넘기는 걸 권해요.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('모두 완료'),
-          ),
-        ],
-      ),
+    final ok = await showArcadeConfirm(
+      context,
+      title: '초안 ${drafts.length}장을 모두 검수 완료로 바꿀까요?',
+      message: 'AI가 만든 문제는 틀릴 수 있어요. 한 장씩 보고 넘기는 걸 권해요.',
+      confirmLabel: '모두 완료',
+      confirmColor: AppColors.lime,
     );
-    if (ok != true) return;
+    if (!ok) return;
     final repo = ref.read(cardRepositoryProvider);
     for (final c in drafts) {
       await repo.setStatus(c.id, CardStatus.verified);

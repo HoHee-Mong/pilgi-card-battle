@@ -10,6 +10,7 @@ import '../../core/widgets/chunky_button.dart';
 import '../../core/widgets/chunky_card.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../subjects/arcade_app_bar.dart';
+import '../subjects/arcade_dialog.dart';
 import 'card_providers.dart';
 import 'card_similarity.dart';
 import 'share_to_room_sheet.dart';
@@ -198,66 +199,42 @@ class _CardEditScreenState extends ConsumerState<CardEditScreen> {
   }
 
   /// 비슷한 문제가 있을 때 저장 전에 한 번 묻는다.
-  Future<bool> _confirmSimilar() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('비슷한 문제가 ${_similar.length}개 있어요'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final s in _similar) ...[
-              Text(
-                s.card.question,
-                style: AppTextStyles.bodyS.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                '${s.card.week}주차 · ${s.card.isVerified ? '검수 완료' : '초안'}',
-                style: AppTextStyles.caption,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-            const Text('그래도 따로 저장할까요?', style: AppTextStyles.body),
+  Future<bool> _confirmSimilar() {
+    return showArcadeConfirm(
+      context,
+      title: '비슷한 문제가 ${_similar.length}개 있어요',
+      confirmLabel: '그래도 저장',
+      cancelLabel: '다시 볼게요',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final s in _similar) ...[
+            Text(
+              s.card.question,
+              style: AppTextStyles.bodyS.copyWith(fontWeight: FontWeight.w700),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              '${s.card.week}주차 · ${s.card.isVerified ? '검수 완료' : '초안'}',
+              style: AppTextStyles.caption,
+            ),
+            const SizedBox(height: AppSpacing.sm),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('다시 볼게요'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('그래도 저장'),
-          ),
+          const Text('그래도 따로 저장할까요?', style: AppTextStyles.body),
         ],
       ),
     );
-    return ok == true;
   }
 
   Future<void> _delete() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('카드를 지울까요?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('지우기'),
-          ),
-        ],
-      ),
+    final ok = await showArcadeConfirm(
+      context,
+      title: '카드를 지울까요?',
+      confirmLabel: '지우기',
+      confirmColor: AppColors.wrong,
     );
-    if (ok != true) return;
+    if (!ok) return;
     await ref.read(cardRepositoryProvider).delete(widget.card!.id);
     if (mounted) Navigator.of(context).pop(true);
   }

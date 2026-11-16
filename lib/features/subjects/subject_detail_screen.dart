@@ -8,6 +8,7 @@ import '../../core/widgets/chunky_press.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../cards/card_providers.dart';
 import 'arcade_app_bar.dart';
+import 'arcade_dialog.dart';
 import 'subject_form_sheet.dart';
 import 'subject_providers.dart';
 import 'subject_utils.dart';
@@ -50,24 +51,14 @@ class SubjectDetailScreen extends ConsumerWidget {
       case 'edit':
         await showSubjectFormSheet(context, subject: subject);
       case 'delete':
-        final ok = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('과목을 지울까요?'),
-            content: const Text('과목 안의 자료와 카드는 그대로 남아요. (정리는 나중에)'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('취소'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('지우기'),
-              ),
-            ],
-          ),
+        final ok = await showArcadeConfirm(
+          context,
+          title: '과목을 지울까요?',
+          message: '과목 안의 자료와 카드는 그대로 남아요. (정리는 나중에)',
+          confirmLabel: '지우기',
+          confirmColor: AppColors.wrong,
         );
-        if (ok == true) {
+        if (ok) {
           await ref.read(subjectRepositoryProvider).delete(subject.id);
           if (context.mounted) Navigator.of(context).pop();
         }
