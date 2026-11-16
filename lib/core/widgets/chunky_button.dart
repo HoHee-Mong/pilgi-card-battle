@@ -49,9 +49,6 @@ class ChunkyButton extends StatelessWidget {
   /// 아이콘만 있는 버튼의 읽기 이름
   final String? semanticLabel;
 
-  static const _height = 56.0;
-  static const _heightLarge = 72.0;
-
   bool get _enabled => onPressed != null && !loading;
 
   @override
@@ -60,7 +57,7 @@ class ChunkyButton extends StatelessWidget {
     final textStyle = (large ? AppTextStyles.buttonL : AppTextStyles.button)
         .copyWith(color: fg);
     final iconSize = large ? 28.0 : 22.0;
-    final height = large ? _heightLarge : _height;
+    final height = large ? AppSpacing.buttonLarge : AppSpacing.button;
 
     final Widget content;
     if (loading) {
