@@ -3,8 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/router.dart';
 import 'core/theme/app_theme.dart';
-import 'features/subjects/subject_list_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -25,17 +25,16 @@ Future<void> _ensureSignedIn() async {
   }
 }
 
-/// 임시 루트. B가 router.dart를 만들면 MaterialApp.router로 교체한다.
-/// 그 전까지는 A의 과목 목록을 홈으로 띄운다.
+/// 앱 루트. 화면 경로와 하단 탭은 `core/router.dart`.
 class PilgiApp extends StatelessWidget {
   const PilgiApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: '필기 카드 배틀',
       theme: AppTheme.light(),
-      home: const SubjectListScreen(),
+      routerConfig: appRouter,
     );
   }
 }

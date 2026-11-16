@@ -151,8 +151,10 @@ class _VoteChipState extends State<VoteChip> {
   @override
   Widget build(BuildContext context) {
     final voted = widget.voted;
-    final textStyle = (widget.compact ? AppTextStyles.chip : AppTextStyles.button)
-        .copyWith(color: AppColors.ink);
+    final textStyle =
+        (widget.compact ? AppTextStyles.chip : AppTextStyles.button).copyWith(
+          color: AppColors.ink,
+        );
     final star = Icon(
       voted ? Icons.star_rounded : Icons.star_outline_rounded,
       size: widget.compact ? 20 : 24,
@@ -172,7 +174,9 @@ class _VoteChipState extends State<VoteChip> {
             color: voted ? AppColors.lime : AppColors.paper,
             radius: widget.compact ? AppRadius.chip : AppRadius.button,
             minWidth: AppSpacing.minTouch + AppSpacing.md,
-            height: widget.compact ? AppSpacing.minTouch + AppSpacing.xs : AppSpacing.button,
+            height: widget.compact
+                ? AppSpacing.minTouch + AppSpacing.xs
+                : AppSpacing.button,
             padding: EdgeInsets.symmetric(
               horizontal: widget.compact ? AppSpacing.md : AppSpacing.lg,
             ),
