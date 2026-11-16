@@ -1,0 +1,58 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:pilgi_card_battle/core/models/room.dart';
+import 'package:pilgi_card_battle/features/battle/battle_repository.dart';
+
+Room _room({
+  Map<String, RoomPlayer> players = const {},
+  RoomStatus status = RoomStatus.waiting,
+}) => Room(
+  id: 'r',
+  code: 'ABC234',
+  hostId: 'host',
+  subjectId: 's',
+  name: '방',
+  status: status,
+  players: players,
+  createdAt: DateTime(2026),
+);
+
+const _host = RoomPlayer(nickname: '선우');
+const _readyFriend = RoomPlayer(nickname: '승호', ready: true);
+const _notReady = RoomPlayer(nickname: '민지');
+
+void main() {
+  test('방장 + 준비한 친구 + 문제 있음 → 시작 가능', () {
+    final room = _room(players: {'host': _host, 'a': _readyFriend});
+    expect(startBlocker(room, 'host', bankCount: 5), isNull);
+  });
+
+  test('방장이 아니면 시작 못 함', () {
+    final room = _room(players: {'host': _host, 'a': _readyFriend});
+    expect(startBlocker(room, 'a', bankCount: 5), isNotNull);
+  });
+
+  test('혼자면 시작 못 함', () {
+    final room = _room(players: {'host': _host});
+    expect(startBlocker(room, 'host', bankCount: 5), contains('친구'));
+  });
+
+  test('준비 안 한 사람이 있으면 그 사람 이름을 알려 준다', () {
+    final room = _room(
+      players: {'host': _host, 'a': _readyFriend, 'b': _notReady},
+    );
+    expect(startBlocker(room, 'host', bankCount: 5), contains('민지'));
+  });
+
+  test('문제은행이 비면 시작 못 함', () {
+    final room = _room(players: {'host': _host, 'a': _readyFriend});
+    expect(startBlocker(room, 'host', bankCount: 0), contains('문제'));
+  });
+
+  test('이미 배틀 중이면 시작 못 함', () {
+    final room = _room(
+      players: {'host': _host, 'a': _readyFriend},
+      status: RoomStatus.playing,
+    );
+    expect(startBlocker(room, 'host', bankCount: 5), isNotNull);
+  });
+}
