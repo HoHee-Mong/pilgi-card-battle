@@ -14,6 +14,7 @@ import '../../core/widgets/chunky_press.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../../core/widgets/vote_button.dart';
 import '../../fx/haptics.dart';
+import '../battle/waiting_room_screen.dart';
 import '../room/room_repository.dart';
 import '../room/room_sheets.dart';
 import 'bank_repository.dart';
@@ -60,6 +61,28 @@ class _BankScreenState extends ConsumerState<BankScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.cream,
+      // 시안 맨 아래 어두운 버튼 자리. 모의고사(A)가 생기면 옆에 같이 둔다.
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            AppSpacing.sm,
+            AppSpacing.page,
+            AppSpacing.sm,
+          ),
+          child: ChunkyButton(
+            label: '친구랑 배틀하기',
+            icon: Icons.bolt_rounded,
+            color: AppColors.ink,
+            shadowColor: AppColors.grape,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => WaitingRoomScreen(roomId: widget.roomId),
+              ),
+            ),
+          ),
+        ),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
