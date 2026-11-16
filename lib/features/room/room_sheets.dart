@@ -12,6 +12,7 @@ import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_button.dart';
 import '../../core/widgets/chunky_card.dart';
 import '../../core/widgets/chunky_press.dart';
+import '../../core/widgets/stat_chip.dart';
 import '../../fx/haptics.dart';
 import '../subjects/subject_providers.dart';
 import 'room_providers.dart';
@@ -509,53 +510,251 @@ class _RoomMenu extends ConsumerWidget {
       tooltip: '방 설정',
       icon: const Icon(Icons.more_vert_rounded, color: AppColors.ink),
       color: AppColors.paper,
-      onSelected: (a) => _run(context, ref, a),
+      onSelected: (a) => a == _RoomAction.settings
+          ? showRoomSettingsSheet(context, room.id)
+          : _leaveOrDelete(context, ref, room, leave: a == _RoomAction.leave),
       itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: _RoomAction.settings,
+          child: Text('방 설정·멤버'),
+        ),
         const PopupMenuItem(value: _RoomAction.leave, child: Text('방 나가기')),
         if (isHost)
           const PopupMenuItem(value: _RoomAction.delete, child: Text('방 지우기')),
       ],
     );
   }
+}
 
-  Future<void> _run(BuildContext context, WidgetRef ref, _RoomAction a) async {
-    final uid = ref.read(uidProvider);
-    if (uid == null) return;
-    final leave = a == _RoomAction.leave;
-    final alone = room.memberIds.length <= 1;
-    final ok = await _confirm(
-      context,
-      title: leave ? '"${room.name}"에서 나갈까요?' : '"${room.name}"을 지울까요?',
-      body: leave
-          ? alone
-                ? '마지막 멤버라 나가면 방이 지워져요. 문제은행·투표 기록도 같이 사라져요.'
-                : '다시 들어오려면 초대 코드가 필요해요. 내가 올린 문제와 투표는 방에 남아요.'
-          : '모든 친구에게서 방이 사라지고, 문제은행·투표·배틀·모의고사 기록도 지워져요. '
-                '각자의 카드는 남아요.',
-      action: leave ? '나가기' : '지우기',
-    );
-    if (ok != true) return;
-    Haptics.medium();
-    final repo = ref.read(roomRepositoryProvider);
-    try {
-      if (leave) {
-        await repo.leaveRoom(roomId: room.id, uid: uid);
-      } else {
-        await repo.deleteRoom(roomId: room.id, uid: uid);
-      }
-      if (context.mounted) Navigator.of(context).pop();
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e is RoomException ? e.message : '잠시 후 다시 해 주세요.'),
-        ),
-      );
+/// 방 나가기·지우기 (확인 창 → 실행 → 성공하면 열려 있는 시트 닫기)
+Future<void> _leaveOrDelete(
+  BuildContext context,
+  WidgetRef ref,
+  Room room, {
+  required bool leave,
+}) async {
+  final uid = ref.read(uidProvider);
+  if (uid == null) return;
+  final alone = room.memberIds.length <= 1;
+  final ok = await _confirm(
+    context,
+    title: leave ? '"${room.name}"에서 나갈까요?' : '"${room.name}"을 지울까요?',
+    body: leave
+        ? alone
+              ? '마지막 멤버라 나가면 방이 지워져요. 문제은행·투표 기록도 같이 사라져요.'
+              : '다시 들어오려면 초대 코드가 필요해요. 내가 올린 문제와 투표는 방에 남아요.'
+        : '모든 친구에게서 방이 사라지고, 문제은행·투표·배틀·모의고사 기록도 지워져요. '
+              '각자의 카드는 남아요.',
+    action: leave ? '나가기' : '지우기',
+  );
+  if (ok != true) return;
+  Haptics.medium();
+  final repo = ref.read(roomRepositoryProvider);
+  try {
+    if (leave) {
+      await repo.leaveRoom(roomId: room.id, uid: uid);
+    } else {
+      await repo.deleteRoom(roomId: room.id, uid: uid);
     }
+    if (context.mounted) Navigator.of(context).pop();
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e is RoomException ? e.message : '잠시 후 다시 해 주세요.'),
+      ),
+    );
   }
 }
 
-enum _RoomAction { leave, delete }
+/// 방 멤버 한 명 (설정 화면 목록용)
+typedef RoomMember = ({String uid, String name, bool isHost, bool isMe});
+
+/// 방장 먼저, 그다음 들어온 순서. 이름을 모르면 "친구".
+List<RoomMember> roomMembers(Room room, String? myUid) {
+  final ids = room.memberIds.isNotEmpty
+      ? room.memberIds
+      : room.players.keys.toList();
+  final list = [
+    for (final id in ids)
+      (
+        uid: id,
+        name: room.nicknameOf(id).isEmpty ? '친구' : room.nicknameOf(id),
+        isHost: room.isHost(id),
+        isMe: id == myUid,
+      ),
+  ];
+  list.sort((a, b) => (b.isHost ? 1 : 0) - (a.isHost ? 1 : 0));
+  return list;
+}
+
+final _watchRoomProvider = StreamProvider.autoDispose.family<Room?, String>(
+  (ref, roomId) => ref.watch(roomRepositoryProvider).watchRoom(roomId),
+);
+
+/// 방 설정: 이름(방장만 변경), 초대 코드 복사, 멤버 목록(방장 표시), 나가기·지우기
+Future<void> showRoomSettingsSheet(BuildContext context, String roomId) {
+  return _sheet<void>(context, _RoomSettings(roomId: roomId));
+}
+
+class _RoomSettings extends ConsumerStatefulWidget {
+  const _RoomSettings({required this.roomId});
+  final String roomId;
+
+  @override
+  ConsumerState<_RoomSettings> createState() => _RoomSettingsState();
+}
+
+class _RoomSettingsState extends ConsumerState<_RoomSettings> {
+  final _name = TextEditingController();
+  bool _loaded = false;
+  bool _busy = false;
+  String? _message;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  Future<void> _rename(Room room, String uid) async {
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      await ref
+          .read(roomRepositoryProvider)
+          .rename(roomId: room.id, uid: uid, name: _name.text);
+      Haptics.light();
+      if (mounted) setState(() => _message = '방 이름을 바꿨어요');
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => _message = e is RoomException ? e.message : '잠시 후 다시 해 주세요.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _copy(String code) async {
+    await Clipboard.setData(ClipboardData(text: code));
+    Haptics.light();
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('초대 코드 $code 복사했어요')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final room = ref.watch(_watchRoomProvider(widget.roomId)).value;
+    final uid = ref.watch(uidProvider);
+    if (room == null || uid == null) {
+      return const Padding(
+        padding: EdgeInsets.all(AppSpacing.section),
+        child: Text('방 정보를 불러오는 중이에요', style: AppTextStyles.label),
+      );
+    }
+    if (!_loaded) {
+      _loaded = true;
+      _name.text = room.name;
+    }
+    final isHost = room.isHost(uid);
+    final members = roomMembers(room, uid);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('방 설정', style: AppTextStyles.titleM),
+        const SizedBox(height: AppSpacing.section),
+        const Text('방 이름', style: AppTextStyles.label),
+        const SizedBox(height: AppSpacing.sm),
+        if (isHost)
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _name,
+                  maxLength: RoomRepository.maxNameLength,
+                  decoration: const InputDecoration(counterText: ''),
+                  onSubmitted: (_) => _rename(room, uid),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              ChunkyButton(
+                label: '바꾸기',
+                expand: false,
+                color: AppColors.sun,
+                loading: _busy,
+                onPressed: _busy ? null : () => _rename(room, uid),
+              ),
+            ],
+          )
+        else
+          Text(room.name, style: AppTextStyles.heading),
+        if (_message != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            _message!,
+            style: AppTextStyles.label.copyWith(color: AppColors.grape),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.section),
+        ChunkyButton(
+          label: '초대 코드 ${room.code} 복사',
+          icon: Icons.copy_rounded,
+          color: AppColors.paper,
+          onPressed: () => _copy(room.code),
+        ),
+        const SizedBox(height: AppSpacing.section),
+        Text('멤버 ${members.length}명', style: AppTextStyles.heading),
+        const SizedBox(height: AppSpacing.sm),
+        for (final m in members)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+            child: Row(
+              children: [
+                Icon(
+                  m.isHost ? Icons.star_rounded : Icons.person_rounded,
+                  color: m.isHost ? AppColors.grape : AppColors.inkSub,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    m.isMe ? '${m.name} (나)' : m.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.body,
+                  ),
+                ),
+                if (m.isHost) const StatChip(label: '방장', color: AppColors.sun),
+              ],
+            ),
+          ),
+        const SizedBox(height: AppSpacing.section),
+        ChunkyButton(
+          label: '방 나가기',
+          color: AppColors.paper,
+          onPressed: () => _leaveOrDelete(context, ref, room, leave: true),
+        ),
+        if (isHost) ...[
+          const SizedBox(height: AppSpacing.sm),
+          ChunkyButton(
+            label: '방 지우기',
+            color: AppColors.pink,
+            onPressed: () => _leaveOrDelete(context, ref, room, leave: false),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+enum _RoomAction { settings, leave, delete }
 
 Future<bool?> _confirm(
   BuildContext context, {

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/room.dart';
@@ -121,6 +122,39 @@ class RoomRepository {
       roundStartedAt: room.roundStartedAt,
       createdAt: room.createdAt,
     );
+  }
+
+  /// 방 이름 최대 글자 수 (방 만들기와 같음)
+  static const maxNameLength = 20;
+
+  /// 방 이름으로 쓸 수 있는지. 쓸 수 있으면 null, 아니면 이유.
+  static String? nameProblem(String input) {
+    final name = input.trim();
+    if (name.isEmpty) return '방 이름을 써 주세요';
+    if (name.characters.length > maxNameLength) {
+      return '$maxNameLength글자까지 쓸 수 있어요';
+    }
+    return null;
+  }
+
+  /// 방 이름 바꾸기 (방장만)
+  Future<void> rename({
+    required String roomId,
+    required String uid,
+    required String name,
+  }) async {
+    final problem = nameProblem(name);
+    if (problem != null) throw RoomException(problem);
+    final ref = _rooms.doc(roomId);
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      final data = snap.data();
+      if (data == null) throw const RoomException('방이 없어졌어요.');
+      if (!Room.fromMap(snap.id, data).isHost(uid)) {
+        throw const RoomException('방장만 이름을 바꿀 수 있어요.');
+      }
+      tx.update(ref, {'name': name.trim()});
+    });
   }
 
   /// 방 나가기: 멤버(memberIds)와 대기실 명단(players)에서 뺀다.
