@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/card.dart';
 import '../../core/models/room.dart';
+import '../../core/theme/layout.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_button.dart';
 import '../../core/widgets/chunky_card.dart';
@@ -120,11 +121,10 @@ class _BattleResultState extends ConsumerState<BattleResult> {
     final wrongCount = total - summary.correct;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.page,
-        AppSpacing.section,
-        AppSpacing.page,
-        AppSpacing.section * 2,
+      padding: AppLayout.pagePadding(
+        context,
+        top: AppSpacing.section,
+        bottom: AppSpacing.section * 2,
       ),
       children: [
         Center(

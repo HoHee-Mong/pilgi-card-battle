@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/card.dart';
 import '../../core/models/room.dart';
+import '../../core/theme/layout.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_button.dart';
 import '../../core/widgets/chunky_card.dart';
@@ -244,11 +245,10 @@ class _BattleViewState extends ConsumerState<BattleView> {
     final myAnswer = _answers.where((a) => a.uid == widget.uid).firstOrNull;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.page,
-        AppSpacing.lg,
-        AppSpacing.page,
-        AppSpacing.section * 2,
+      padding: AppLayout.pagePadding(
+        context,
+        top: AppSpacing.lg,
+        bottom: AppSpacing.section * 2,
       ),
       children: [
         Row(

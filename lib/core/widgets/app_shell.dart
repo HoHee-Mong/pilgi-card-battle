@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../fx/haptics.dart';
+import '../theme/layout.dart';
 import '../theme/tokens.dart';
 
 /// 하단 탭 4개(로비 / 문제은행 / 모의고사 / 내 카드)를 단 앱 뼈대.
@@ -62,17 +63,24 @@ class AppTabBar extends StatelessWidget {
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
-          child: Row(
-            children: [
-              for (final (i, label) in labels.indexed)
-                Expanded(
-                  child: _Tab(
-                    label: label,
-                    selected: i == current,
-                    onTap: () => onTap(i),
-                  ),
-                ),
-            ],
+          // 태블릿에서는 탭이 너무 벌어지지 않게 가운데로 모은다
+          child: Center(
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: AppLayout.maxContent),
+              child: Row(
+                children: [
+                  for (final (i, label) in labels.indexed)
+                    Expanded(
+                      child: _Tab(
+                        label: label,
+                        selected: i == current,
+                        onTap: () => onTap(i),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_providers.dart';
 import '../../core/auth/user_profile.dart';
 import '../../core/models/room.dart';
+import '../../core/theme/layout.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_button.dart';
 import '../../core/widgets/chunky_card.dart';
@@ -155,11 +156,10 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
       children: [
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.page,
-              AppSpacing.lg,
-              AppSpacing.page,
-              AppSpacing.section,
+            padding: AppLayout.pagePadding(
+              context,
+              top: AppSpacing.lg,
+              bottom: AppSpacing.section,
             ),
             children: [
               Row(
@@ -210,11 +210,10 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
         ),
         if (room.status == RoomStatus.waiting)
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.page,
-              0,
-              AppSpacing.page,
-              AppSpacing.lg,
+            padding: AppLayout.pagePadding(
+              context,
+              top: 0,
+              bottom: AppSpacing.lg,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,

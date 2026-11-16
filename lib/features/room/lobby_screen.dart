@@ -7,6 +7,7 @@ import '../../core/auth/user_profile.dart';
 import '../../core/models/room.dart';
 import '../../core/models/subject.dart';
 import '../../core/router.dart';
+import '../../core/theme/layout.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_button.dart';
 import '../../core/widgets/boss_sprite.dart';
@@ -44,11 +45,10 @@ class LobbyScreen extends ConsumerWidget {
       backgroundColor: AppColors.grape,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.page,
-            AppSpacing.lg,
-            AppSpacing.page,
-            AppSpacing.section * 2,
+          padding: AppLayout.pagePadding(
+            context,
+            top: AppSpacing.lg,
+            bottom: AppSpacing.section * 2,
           ),
           children: [
             _Profile(nickname: nickname),
