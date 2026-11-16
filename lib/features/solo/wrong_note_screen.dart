@@ -29,7 +29,8 @@ class WrongNoteScreen extends ConsumerStatefulWidget {
 }
 
 class _WrongNoteScreenState extends ConsumerState<WrongNoteScreen> {
-  _Filter _filter = _Filter.needsReview;
+  /// 사용자가 고른 필터. 고르기 전엔 복습 필요가 있으면 그것, 없으면 전체.
+  _Filter? _filter;
 
   Future<void> _retry(List<QuizCard> cards) {
     return Navigator.of(context, rootNavigator: true).push<String>(
@@ -112,7 +113,9 @@ class _WrongNoteScreenState extends ConsumerState<WrongNoteScreen> {
         data: (all) {
           final needs = all.where((w) => w.entry.needsReview).toList();
           final done = all.where((w) => w.entry.reviewed).toList();
-          final shown = switch (_filter) {
+          final filter =
+              _filter ?? (needs.isEmpty ? _Filter.all : _Filter.needsReview);
+          final shown = switch (filter) {
             _Filter.needsReview => needs,
             _Filter.reviewed => done,
             _Filter.all => all,
@@ -166,7 +169,7 @@ class _WrongNoteScreenState extends ConsumerState<WrongNoteScreen> {
                   ])
                     ChoiceChip(
                       label: Text(label),
-                      selected: _filter == f,
+                      selected: filter == f,
                       onSelected: (_) => setState(() => _filter = f),
                     ),
                 ],
