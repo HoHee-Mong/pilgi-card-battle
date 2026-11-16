@@ -87,6 +87,47 @@ class BankRepository {
     });
   }
 
+  /// 문제은행에서 카드 빼기. 올린 사람이나 방장만 할 수 있다 ([canRemove]).
+  ///
+  /// 투표 기록도 같이 지워진다. 내 카드면 카드 문서의 `roomIds`에서 방을 빼고,
+  /// 남은 방이 없으면 `visibility`를 private으로 되돌린다.
+  /// (남의 카드 문서는 건드리지 않는다 — 카드 주인만 고칠 수 있다.)
+  Future<void> removeCard({
+    required Room room,
+    required String cardId,
+    required String uid,
+  }) {
+    final entryRef = _bank(room.id).doc(cardId);
+    final cardRef = _cards.doc(cardId);
+    return _db.runTransaction((tx) async {
+      final entrySnap = await tx.get(entryRef);
+      final entryData = entrySnap.data();
+      if (entryData == null) return; // 이미 빠짐
+      final entry = BankEntry.fromMap(entrySnap.id, entryData);
+      if (!canRemove(entry, room, uid)) {
+        throw const BankException('올린 사람이나 방장만 뺄 수 있어요.');
+      }
+      final cardSnap = await tx.get(cardRef);
+      final cardData = cardSnap.data();
+      tx.delete(entryRef);
+      if (cardData != null) {
+        final card = QuizCard.fromMap(cardSnap.id, cardData);
+        if (card.ownerId == uid) {
+          final rest = card.roomIds.where((r) => r != room.id).toList();
+          tx.update(cardRef, {
+            'roomIds': rest,
+            if (rest.isEmpty) 'visibility': CardVisibility.private.name,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+    });
+  }
+
+  /// 문제은행에서 뺄 수 있는 사람: 올린 사람 또는 방장
+  static bool canRemove(BankEntry entry, Room room, String uid) =>
+      entry.addedBy == uid || room.isHost(uid);
+
   /// 문제은행 실시간 목록. 문항 수가 적어 정렬은 앱에서 한다 (복합 색인 불필요).
   Stream<List<BankEntry>> watchBank(
     String roomId, {
