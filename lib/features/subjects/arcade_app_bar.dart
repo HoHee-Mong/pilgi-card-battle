@@ -21,7 +21,8 @@ class ArcadeAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// 비우면 테마의 scaffold 배경(cream)
   final Color? backgroundColor;
 
-  static const _height = 72.0;
+  /// 버튼 56 + 그림자 6 + 위아래 여백. Scaffold는 여기에 상태바 높이를 더해 준다.
+  static const _height = 84.0;
 
   @override
   Size get preferredSize => const Size.fromHeight(_height);
@@ -29,15 +30,19 @@ class ArcadeAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final canPop = showBack && Navigator.of(context).canPop();
+    final top = MediaQuery.paddingOf(context).top;
+    // 내용이 비어도 같은 높이를 차지하게 높이를 못 박는다 (제목 위치가 화면마다 흔들리지 않게).
     return Container(
+      height: top + _height,
       color: backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
       padding: EdgeInsets.fromLTRB(
         AppSpacing.page,
-        MediaQuery.paddingOf(context).top + AppSpacing.sm,
+        top + AppSpacing.sm,
         AppSpacing.page,
-        0,
+        AppSpacing.section,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (canPop)
             ArcadeIconButton(
