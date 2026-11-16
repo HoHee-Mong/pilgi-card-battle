@@ -429,9 +429,7 @@ class _RoomCard extends ConsumerWidget {
     final count = room == null
         ? null
         : ref.watch(_bankCountProvider(room.id)).value;
-    final names = room == null
-        ? const <String>[]
-        : [for (final p in room.players.values) p.nickname];
+    final names = room == null ? const <String>[] : memberNamesOf(room);
 
     return ChunkyCard(
       color: AppColors.lime,
@@ -546,4 +544,16 @@ class _MockCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 방 멤버 이름 (들어온 순서). 이름을 모르는 사람은 "친구".
+/// 대기실 명단(players)이 아니라 멤버 기준이라, 대기실을 나간 친구도 보인다.
+List<String> memberNamesOf(Room room) {
+  final ids = room.memberIds.isNotEmpty
+      ? room.memberIds
+      : room.players.keys.toList(); // memberIds가 없는 아주 예전 방
+  return [
+    for (final uid in ids)
+      room.nicknameOf(uid).isEmpty ? '친구' : room.nicknameOf(uid),
+  ];
 }
