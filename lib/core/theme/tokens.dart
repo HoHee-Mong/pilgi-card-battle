@@ -85,6 +85,9 @@ abstract final class AppRadius {
   /// 작은 칩 (12~16)
   static const chip = 14.0;
 
+  /// 알약 모양 (StatChip)
+  static const pill = 999.0;
+
   /// 원형 아이콘 버튼 (지름 44 기준 반지름)
   static const iconButton = 22.0;
 }
@@ -183,6 +186,22 @@ abstract final class AppTextStyles {
     fontFamily: AppFonts.display,
     fontFamilyFallback: AppFonts.fallback,
     fontSize: 17,
+    height: 1.2,
+  );
+
+  /// 상태 알약 글자 (StatChip)
+  static const chip = TextStyle(
+    fontFamily: AppFonts.display,
+    fontFamilyFallback: AppFonts.fallback,
+    fontSize: 15,
+    height: 1.2,
+  );
+
+  /// 화면 대표 버튼 글자 (큰 버튼)
+  static const buttonL = TextStyle(
+    fontFamily: AppFonts.display,
+    fontFamilyFallback: AppFonts.fallback,
+    fontSize: 22,
     height: 1.2,
   );
 }
