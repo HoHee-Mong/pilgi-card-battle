@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/auth/auth_providers.dart';
@@ -13,6 +14,8 @@ import '../../core/widgets/stat_chip.dart';
 import '../../fx/haptics.dart';
 import '../bank/bank_repository.dart';
 import '../room/room_repository.dart';
+import '../bank/upload_cards_sheet.dart';
+import 'battle_help_sheet.dart';
 import 'battle_repository.dart';
 import 'battle_view.dart';
 
@@ -96,6 +99,14 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
     }
   }
 
+  Future<void> _copyCode(String code) async {
+    await Clipboard.setData(ClipboardData(text: code));
+    Haptics.light();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('초대 코드 $code 복사했어요')));
+  }
+
   Future<void> _start() async {
     final uid = _uid;
     if (uid == null || _starting) return;
@@ -172,7 +183,27 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
                     child: const Icon(Icons.chevron_left_rounded),
                   ),
                   const Spacer(),
-                  StatChip(label: '초대 코드 ${room.code}', color: AppColors.sun),
+                  // 누르면 초대 코드 복사
+                  Semantics(
+                    button: true,
+                    label: '초대 코드 복사',
+                    child: GestureDetector(
+                      onTap: () => _copyCode(room.code),
+                      child: StatChip(
+                        label: '초대 코드 ${room.code}',
+                        icon: Icons.copy_rounded,
+                        color: AppColors.sun,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  ChunkyButton(
+                    expand: false,
+                    color: AppColors.paper,
+                    semanticLabel: '배틀 하는 법',
+                    onPressed: () => showBattleHelpSheet(context),
+                    child: const Icon(Icons.question_mark_rounded),
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.section),
@@ -218,6 +249,17 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // 문제가 없으면 바로 올릴 수 있게
+                if (pickable == 0)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: ChunkyButton(
+                      label: '내 카드 문제은행에 올리기',
+                      icon: Icons.upload_rounded,
+                      color: AppColors.sun,
+                      onPressed: () => showUploadMyCardsSheet(context, room),
+                    ),
+                  ),
                 if (_error != null || (isHost && blocker != null))
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -238,22 +280,12 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
                     onPressed: blocker == null ? _start : null,
                   )
                 else
-                  ChunkyButton(
-                    label: me?.ready == true ? '준비 풀기' : '준비 완료',
-                    large: true,
-                    color: me?.ready == true ? AppColors.paper : AppColors.lime,
-                    onPressed: me == null
-                        ? null
-                        : () {
-                            Haptics.light();
-                            _run(
-                              () => _battle.setReady(
-                                roomId: widget.roomId,
-                                uid: uid,
-                                ready: !me.ready,
-                              ),
-                            );
-                          },
+                  Text(
+                    me == null ? '대기실에 들어가는 중…' : '방장이 "배틀 시작"을 누르면 바로 시작돼요',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.heading.copyWith(
+                      color: AppColors.paper,
+                    ),
                   ),
               ],
             ),
@@ -334,10 +366,7 @@ class _Players extends StatelessWidget {
                   if (e.key == room.hostId)
                     const StatChip(label: '방장', color: AppColors.sun)
                   else
-                    StatChip(
-                      label: e.value.ready ? '준비 완료' : '준비 중',
-                      color: e.value.ready ? AppColors.lime : AppColors.cream,
-                    ),
+                    const StatChip(label: '참가', color: AppColors.lime),
                 ],
               ),
             ),

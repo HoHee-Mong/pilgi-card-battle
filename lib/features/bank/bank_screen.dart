@@ -20,6 +20,7 @@ import '../room/room_repository.dart';
 import '../room/room_sheets.dart';
 import '../room/room_stats_screen.dart';
 import 'bank_repository.dart';
+import 'upload_cards_sheet.dart';
 
 final _roomProvider = StreamProvider.autoDispose.family<Room?, String>(
   (ref, roomId) => ref.watch(roomRepositoryProvider).watchRoom(roomId),
@@ -97,6 +98,15 @@ class _BankScreenState extends ConsumerState<BankScreen> {
             const Text('예상 문제 랭킹', style: AppTextStyles.titleL),
             const SizedBox(height: AppSpacing.xs),
             const Text('우리가 ‘나올 것 같다’고 고른 문제들', style: AppTextStyles.label),
+            if (room != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              ChunkyButton(
+                label: '내 카드 한꺼번에 올리기',
+                icon: Icons.upload_rounded,
+                color: AppColors.sun,
+                onPressed: () => showUploadMyCardsSheet(context, room),
+              ),
+            ],
             const SizedBox(height: AppSpacing.section),
             _SortTabs(
               value: _sort,
@@ -111,7 +121,7 @@ class _BankScreenState extends ConsumerState<BankScreen> {
               error: (e, _) => const [_Message('문제은행을 불러오지 못했어요.')],
               data: (entries) => entries.isEmpty
                   ? const [
-                      _Message('아직 공유된 문제가 없어요.\n카드 화면에서 "방에 공유"를 눌러 보세요.'),
+                      _Message('아직 올라온 문제가 없어요.\n위의 "내 카드 한꺼번에 올리기"를 눌러 보세요.'),
                     ]
                   : _entryList(entries, room),
             ),
