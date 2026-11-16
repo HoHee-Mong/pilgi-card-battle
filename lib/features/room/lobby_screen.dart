@@ -25,6 +25,7 @@ import 'boss_preview_screen.dart';
 import 'progress_repository.dart';
 import 'progress_rules.dart';
 import 'room_providers.dart';
+import 'room_repository.dart';
 
 final _bankCountProvider = StreamProvider.autoDispose.family<int, String>(
   (ref, roomId) => ref
@@ -138,7 +139,13 @@ class _ProfileState extends ConsumerState<_Profile> {
               button: true,
               label: '내 계정',
               child: GestureDetector(
-                onTap: () => showAccountSheet(context),
+                onTap: () => showAccountSheet(
+                  context,
+                  // 이름을 바꾸면 내 방들의 이름표도 같이 바꾼다
+                  onNicknameChanged: (uid, name) => ref
+                      .read(roomRepositoryProvider)
+                      .renameEverywhere(uid: uid, nickname: name),
+                ),
                 child: Container(
                   width: _avatar,
                   height: _avatar,

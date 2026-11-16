@@ -190,6 +190,24 @@ class RoomRepository {
     return others.isEmpty ? null : others.first;
   }
 
+  /// 이름을 바꿨을 때: 내가 멤버인 모든 방의 이름표(와 대기실 명단 이름)를 바꾼다.
+  Future<void> renameEverywhere({
+    required String uid,
+    required String nickname,
+  }) async {
+    final snap = await _rooms.where('memberIds', arrayContains: uid).get();
+    if (snap.docs.isEmpty) return;
+    final batch = _db.batch();
+    for (final doc in snap.docs) {
+      final room = Room.fromMap(doc.id, doc.data());
+      batch.update(doc.reference, {
+        'memberNames.$uid': nickname,
+        if (room.players.containsKey(uid)) 'players.$uid.nickname': nickname,
+      });
+    }
+    await batch.commit();
+  }
+
   /// 방 하나 실시간 구독. 문서가 없어지면 null.
   Stream<Room?> watchRoom(String roomId) {
     return _rooms.doc(roomId).snapshots().map((doc) {
