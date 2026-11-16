@@ -123,6 +123,73 @@ class RoomRepository {
     );
   }
 
+  /// 방 나가기: 멤버(memberIds)와 대기실 명단(players)에서 뺀다.
+  /// 이름표(memberNames)는 남겨서 내가 한 투표·올린 문제의 이름이 그대로 보이게 한다.
+  /// 방장이면 다른 멤버에게 방장을 넘기고, 마지막 한 명이면 방을 지운다.
+  Future<void> leaveRoom({required String roomId, required String uid}) async {
+    final ref = _rooms.doc(roomId);
+    final wasLast = await _db.runTransaction<bool>((tx) async {
+      final snap = await tx.get(ref);
+      final data = snap.data();
+      if (data == null) return false;
+      final room = Room.fromMap(snap.id, data);
+      final next = nextHostAfter(room, uid);
+      if (next == null) return true; // 나 혼자 남은 방
+      tx.update(ref, {
+        'memberIds': FieldValue.arrayRemove([uid]),
+        'players.$uid': FieldValue.delete(),
+        if (room.isHost(uid)) 'hostId': next,
+      });
+      return false;
+    });
+    if (wasLast) await _deleteAll(roomId);
+  }
+
+  /// 방 지우기 (방장만): 문제은행·투표·배틀 답·모의고사 기록까지 모두 지운다.
+  /// 각자의 카드 자체는 지워지지 않는다.
+  Future<void> deleteRoom({required String roomId, required String uid}) async {
+    final snap = await _rooms.doc(roomId).get();
+    final data = snap.data();
+    if (data == null) return;
+    if (!Room.fromMap(snap.id, data).isHost(uid)) {
+      throw const RoomException('방장만 방을 지울 수 있어요.');
+    }
+    await _deleteAll(roomId);
+  }
+
+  /// 방 아래 기록들 → 방 문서 순서로 지운다.
+  Future<void> _deleteAll(String roomId) async {
+    final ref = _rooms.doc(roomId);
+    for (final sub in roomSubcollections) {
+      final docs = (await ref.collection(sub).get()).docs;
+      // 배치 한 번에 최대 500개
+      for (var i = 0; i < docs.length; i += 450) {
+        final batch = _db.batch();
+        for (final d in docs.skip(i).take(450)) {
+          batch.delete(d.reference);
+        }
+        await batch.commit();
+      }
+    }
+    await ref.delete();
+  }
+
+  /// `rooms/{roomId}` 아래 컬렉션 (DATA.md). 방을 지울 때 같이 지운다.
+  static const roomSubcollections = ['bank', 'answers', 'mockExams'];
+
+  /// [leaving]이 나간 뒤 방장. 대기실에 있는 사람 먼저, 없으면 먼저 들어온 멤버.
+  /// 남는 사람이 없으면 null.
+  static String? nextHostAfter(Room room, String leaving) {
+    if (!room.isHost(leaving)) {
+      final others = room.memberIds.where((m) => m != leaving);
+      return others.isEmpty ? null : room.hostId;
+    }
+    final inWaiting = room.players.keys.where((k) => k != leaving);
+    if (inWaiting.isNotEmpty) return inWaiting.first;
+    final others = room.memberIds.where((m) => m != leaving);
+    return others.isEmpty ? null : others.first;
+  }
+
   /// 방 하나 실시간 구독. 문서가 없어지면 null.
   Stream<Room?> watchRoom(String roomId) {
     return _rooms.doc(roomId).snapshots().map((doc) {
