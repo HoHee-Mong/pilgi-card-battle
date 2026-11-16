@@ -25,6 +25,7 @@ class BattleAnswer {
     required this.choice,
     required this.correct,
     required this.elapsedMs,
+    this.saved = false,
   });
 
   final String uid;
@@ -35,12 +36,16 @@ class BattleAnswer {
   final bool correct;
   final int elapsedMs;
 
+  /// 오답 노트(attempts)에 이미 저장했는지. 끝난 방에 다시 들어와도 두 번 저장하지 않게.
+  final bool saved;
+
   factory BattleAnswer.fromMap(Map<String, dynamic> map) => BattleAnswer(
     uid: map['uid'] as String? ?? '',
     round: (map['round'] as num?)?.toInt() ?? 0,
     choice: map['choice'] as String? ?? '',
     correct: map['correct'] as bool? ?? false,
     elapsedMs: (map['elapsedMs'] as num?)?.toInt() ?? 0,
+    saved: map['saved'] as bool? ?? false,
   );
 
   Map<String, dynamic> toMap() => {
@@ -224,7 +229,10 @@ class BattleRepository {
 
   /// 배틀 결과를 `users/{uid}/attempts`에 `mode: battle`로 저장 → A의 오답 노트에 반영.
   /// 시간 초과(빈 답)도 틀린 것으로 저장한다.
-  Future<void> saveAttempts({
+  /// 이미 저장한 답은 건너뛰고, 저장한 답에는 `saved: true`를 남긴다 (같은 배치라 함께 성공·실패).
+  /// 반환값: 이번에 새로 저장한 게 있는지 (없으면 XP도 다시 주지 않는다).
+  Future<bool> saveAttempts({
+    required String roomId,
     required String uid,
     required List<QuizCard> cards,
     required List<BattleAnswer> answers,
@@ -234,8 +242,9 @@ class BattleRepository {
     final batch = _db.batch();
     final col = _db.collection('users').doc(uid).collection('attempts');
     final now = DateTime.now();
+    var any = false;
     for (final a in answers) {
-      if (a.round >= cardIds.length) continue;
+      if (a.saved || a.round >= cardIds.length) continue;
       final card = byId[cardIds[a.round]];
       if (card == null) continue;
       batch.set(
@@ -250,8 +259,12 @@ class BattleRepository {
           at: now,
         ).toMap(),
       );
+      batch.update(_answers(roomId).doc('${a.round}_$uid'), {'saved': true});
+      any = true;
     }
+    if (!any) return false;
     await batch.commit();
+    return true;
   }
 
   /// 이번 라운드에 들어온 답들 (실시간)
