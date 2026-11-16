@@ -17,7 +17,7 @@ users/{uid}/attempts/{attemptId}        # 풀이 기록 (A가 쓰고, B도 배�
   mode: "solo" | "battle" | "mock"
   at: timestamp
 
-users/{uid}/cardMeta/{cardId}           # 사용자별 카드 상태 (A)
+users/{uid}/cardMeta/{cardId}           # 사용자별 카드 상태 (A) — 모델 `lib/core/models/card_meta.dart`
   favorite: bool
   inWrongNote: bool
   reviewedDone: bool
