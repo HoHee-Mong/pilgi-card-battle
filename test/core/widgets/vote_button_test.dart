@@ -58,4 +58,35 @@ void main() {
     expect(find.text('3'), findsOneWidget);
     expect(find.text('2'), findsNothing);
   });
+
+  testWidgets('VoteChip: 투표하면 "+1"이 떴다 사라지고, compact는 숫자만', (tester) async {
+    var voted = false;
+    late StateSetter setOuter;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                setOuter = setState;
+                return VoteChip(
+                  count: voted ? 1 : 0,
+                  voted: voted,
+                  compact: true,
+                  onTap: () {},
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('나올 것 같아요'), findsNothing);
+    expect(find.text('+1'), findsNothing);
+    setOuter(() => voted = true);
+    await tester.pump();
+    expect(find.text('+1'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('1'), findsOneWidget);
+  });
 }
