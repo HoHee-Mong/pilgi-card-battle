@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/room.dart';
+import '../../core/models/attempt.dart';
 import '../../core/models/card.dart';
 import '../bank/bank_repository.dart';
 import 'battle_rules.dart';
@@ -168,6 +169,8 @@ class BattleRepository {
     );
     final blocker = startBlocker(room, uid, bankCount: picked.length);
     if (blocker != null) throw BattleException(blocker);
+    // 지난 판 답이 남아 있으면 같은 문서 id(round_uid)라 새 답이 막힌다 → 먼저 비운다.
+    await _clearAnswers(roomId);
 
     await _db.runTransaction((tx) async {
       final snap = await tx.get(roomRef);
@@ -190,6 +193,62 @@ class BattleRepository {
 
   CollectionReference<Map<String, dynamic>> _answers(String roomId) =>
       _room(roomId).collection('answers');
+
+  Future<void> _clearAnswers(String roomId) async {
+    final old = await _answers(roomId).get();
+    // 배치 한 번에 최대 500개
+    for (var i = 0; i < old.docs.length; i += 450) {
+      final batch = _db.batch();
+      for (final d in old.docs.skip(i).take(450)) {
+        batch.delete(d.reference);
+      }
+      await batch.commit();
+    }
+  }
+
+  /// 이번 판에서 내가 낸 답 전부 (결과 화면용)
+  Stream<List<BattleAnswer>> watchMyAnswers(String roomId, String uid) {
+    return _answers(roomId)
+        .where('uid', isEqualTo: uid)
+        .snapshots()
+        .map(
+          (snap) =>
+              [for (final d in snap.docs) BattleAnswer.fromMap(d.data())]
+                ..sort((a, b) => a.round.compareTo(b.round)),
+        );
+  }
+
+  /// 배틀 결과를 `users/{uid}/attempts`에 `mode: battle`로 저장 → A의 오답 노트에 반영.
+  /// 시간 초과(빈 답)도 틀린 것으로 저장한다.
+  Future<void> saveAttempts({
+    required String uid,
+    required List<QuizCard> cards,
+    required List<BattleAnswer> answers,
+    required List<String> cardIds,
+  }) async {
+    final byId = {for (final c in cards) c.id: c};
+    final batch = _db.batch();
+    final col = _db.collection('users').doc(uid).collection('attempts');
+    final now = DateTime.now();
+    for (final a in answers) {
+      if (a.round >= cardIds.length) continue;
+      final card = byId[cardIds[a.round]];
+      if (card == null) continue;
+      batch.set(
+        col.doc(),
+        Attempt(
+          id: '',
+          cardId: card.id,
+          subjectId: card.subjectId,
+          concept: card.concept,
+          correct: a.correct,
+          mode: AttemptMode.battle,
+          at: now,
+        ).toMap(),
+      );
+    }
+    await batch.commit();
+  }
 
   /// 이번 라운드에 들어온 답들 (실시간)
   Stream<List<BattleAnswer>> watchAnswers(String roomId, int round) {
