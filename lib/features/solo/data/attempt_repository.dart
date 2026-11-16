@@ -18,20 +18,22 @@ class AttemptRepository {
 
   String newId(String uid) => _attempts(uid).doc().id;
 
-  /// 풀이 기록을 한 번에 저장하고, 틀린 카드는 오답 노트에 넣는다
-  /// (`inWrongNote: true`, `reviewedDone: false`). 맞힌 카드는 건드리지 않는다.
+  /// 풀이 기록을 한 번에 저장하고 `cardMeta`도 맞춘다:
+  /// 틀리면 `inWrongNote: true, reviewedDone: false`, 맞히면 `reviewedDone: true`.
+  /// (오답 노트 화면 자체는 attempts만으로 계산하므로 B의 배틀 기록도 자동 반영된다)
   Future<void> saveAttempts(String uid, List<Attempt> attempts) async {
     const chunk = 200; // attempt 1 + meta 1 = 쓰기 2개씩, 배치 한도 500
     for (var i = 0; i < attempts.length; i += chunk) {
       final batch = _db.batch();
       for (final a in attempts.skip(i).take(chunk)) {
         batch.set(_attempts(uid).doc(a.id), a.toMap());
-        if (!a.correct) {
-          batch.set(_meta(uid).doc(a.cardId), {
-            'inWrongNote': true,
-            'reviewedDone': false,
-          }, SetOptions(merge: true));
-        }
+        batch.set(
+          _meta(uid).doc(a.cardId),
+          a.correct
+              ? {'reviewedDone': true}
+              : {'inWrongNote': true, 'reviewedDone': false},
+          SetOptions(merge: true),
+        );
       }
       await batch.commit();
     }

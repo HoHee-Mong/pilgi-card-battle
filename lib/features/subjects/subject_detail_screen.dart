@@ -10,6 +10,8 @@ import '../../core/widgets/chunky_button.dart';
 import '../cards/card_providers.dart';
 import '../notebook/notebook_screen.dart';
 import '../solo/solo_setup_screen.dart';
+import '../solo/wrong_note_providers.dart';
+import '../solo/wrong_note_screen.dart';
 import 'arcade_app_bar.dart';
 import 'arcade_dialog.dart';
 import 'subject_form_sheet.dart';
@@ -93,6 +95,13 @@ class SubjectDetailScreen extends ConsumerWidget {
                 .value
                 ?.length ??
             0;
+        final needsReview =
+            ref
+                .watch(wrongNoteProvider(subject.id))
+                .value
+                ?.where((w) => w.entry.needsReview)
+                .length ??
+            0;
         return Scaffold(
           appBar: ArcadeAppBar(
             trailing: [
@@ -140,6 +149,19 @@ class SubjectDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              ChunkyButton(
+                label: needsReview == 0
+                    ? '오답 노트'
+                    : '오답 노트 · 복습 필요 $needsReview',
+                icon: Icons.bookmark_border_rounded,
+                color: needsReview == 0 ? AppColors.paper : AppColors.wrong,
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => WrongNoteScreen(subject: subject),
+                  ),
+                ),
               ),
               const SizedBox(height: AppSpacing.section),
               const ArcadeSectionHeader(title: '주차 선택'),
