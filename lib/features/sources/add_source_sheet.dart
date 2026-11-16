@@ -9,6 +9,8 @@ import '../../core/auth/user_profile.dart';
 import '../../core/models/card.dart';
 import '../../core/models/source.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/widgets/chunky_button.dart';
+import '../../core/widgets/chunky_card.dart';
 import '../cards/card_providers.dart';
 import 'data/source_repository.dart';
 import 'source_providers.dart';
@@ -27,9 +29,10 @@ Future<List<StudySource>> showAddSourceSheet(
     isScrollControlled: true,
     isDismissible: false,
     enableDrag: false,
-    backgroundColor: Theme.of(context).colorScheme.surface,
+    backgroundColor: AppColors.cream,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.card)),
+      side: BorderSide(color: AppColors.ink, width: AppBlock.border),
     ),
     builder: (_) => _AddSourceSheet(
       subjectId: subjectId,
@@ -326,6 +329,7 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
           icon: Icons.photo_camera_outlined,
           title: '필기 찍기',
           subtitle: '카메라로 노트·칠판 촬영',
+          color: AppColors.pink,
           onTap: () => _onPick(_PickKind.camera),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -333,6 +337,7 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
           icon: Icons.photo_library_outlined,
           title: '갤러리에서 고르기',
           subtitle: '사진 여러 장을 한 자료로 묶어요 (최대 10장)',
+          color: AppColors.lime,
           onTap: () => _onPick(_PickKind.gallery),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -340,6 +345,7 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
           icon: Icons.picture_as_pdf_outlined,
           title: 'PDF 고르기',
           subtitle: '강의자료 (15MB 이하)',
+          color: AppColors.cyan,
           onTap: () => _onPick(_PickKind.pdf),
         ),
       ],
@@ -384,14 +390,11 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
           ],
         ),
         const SizedBox(height: AppSpacing.section),
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: FilledButton.icon(
-            onPressed: _run,
-            icon: const Icon(Icons.auto_awesome_outlined),
-            label: Text('$_count장 만들기'),
-          ),
+        ChunkyButton(
+          label: '$_count장 만들기',
+          icon: Icons.auto_awesome_outlined,
+          large: true,
+          onPressed: _run,
         ),
         const SizedBox(height: AppSpacing.sm),
         Row(
@@ -425,11 +428,16 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
         children: [
           Text(_stage, style: AppTextStyles.heading),
           const SizedBox(height: AppSpacing.md),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.chip),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.chip),
+              border: Border.all(color: AppColors.ink, width: AppBlock.border),
+            ),
+            clipBehavior: Clip.antiAlias,
             child: const LinearProgressIndicator(
-              minHeight: 10,
-              color: AppColors.ink,
+              minHeight: 14,
+              color: AppColors.pink,
+              backgroundColor: AppColors.paper,
             ),
           ),
         ],
@@ -444,41 +452,41 @@ class _Option extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.color = AppColors.paper,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(AppRadius.button),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.button),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Row(
-            children: [
-              Icon(icon, size: 28, color: AppColors.ink),
-              const SizedBox(width: AppSpacing.lg),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: AppTextStyles.heading),
-                    Text(subtitle, style: AppTextStyles.caption),
-                  ],
+    return ChunkyCard(
+      onTap: onTap,
+      color: color,
+      radius: AppRadius.button,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        children: [
+          Icon(icon, size: 30, color: AppColors.ink),
+          const SizedBox(width: AppSpacing.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.heading),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.caption.copyWith(color: AppColors.ink),
                 ),
-              ),
-              const Icon(Icons.chevron_right, color: AppColors.inkSub),
-            ],
+              ],
+            ),
           ),
-        ),
+          const Icon(Icons.chevron_right, color: AppColors.ink),
+        ],
       ),
     );
   }

@@ -6,6 +6,8 @@ import '../../core/auth/user_profile.dart';
 import '../../core/models/card.dart';
 import '../../core/models/room.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/widgets/chunky_card.dart';
+import '../../core/widgets/stat_chip.dart';
 import '../bank/bank_repository.dart';
 import '../room/room_repository.dart';
 
@@ -25,9 +27,10 @@ Future<String?> showShareToRoomSheet(
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Theme.of(context).colorScheme.surface,
+    backgroundColor: AppColors.cream,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.card)),
+      side: BorderSide(color: AppColors.ink, width: AppBlock.border),
     ),
     builder: (_) => _ShareSheet(card: card),
   );
@@ -184,44 +187,42 @@ class _RoomRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: shared ? AppColors.lime : scheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(AppRadius.button),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.button),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(room.name, style: AppTextStyles.heading),
-                    Text(
-                      '${room.memberIds.length}명 · 코드 ${room.code}'
-                      '${sameSubject ? '' : ' · 다른 과목'}',
-                      style: AppTextStyles.caption,
-                    ),
-                  ],
-                ),
-              ),
-              if (busy)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
+    return ChunkyCard(
+      onTap: onTap,
+      color: shared ? AppColors.lime : AppColors.paper,
+      radius: AppRadius.button,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(room.name, style: AppTextStyles.heading),
                 Text(
-                  shared ? '공유됨' : '공유',
-                  style: AppTextStyles.button.copyWith(color: AppColors.ink),
+                  '${room.memberIds.length}명 · 코드 ${room.code}'
+                  '${sameSubject ? '' : ' · 다른 과목'}',
+                  style: AppTextStyles.caption.copyWith(color: AppColors.ink),
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: AppSpacing.sm),
+          if (busy)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: AppColors.ink,
+              ),
+            )
+          else
+            StatChip(
+              label: shared ? '공유됨' : '공유',
+              color: shared ? AppColors.paper : AppColors.pink,
+            ),
+        ],
       ),
     );
   }

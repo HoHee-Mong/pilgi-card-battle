@@ -3,13 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/subject.dart';
 import '../../core/theme/tokens.dart';
-import '../sources/source_detail_screen.dart';
-import '../sources/source_providers.dart';
-import '../sources/source_tile.dart';
+import '../../core/widgets/chunky_button.dart';
+import '../../core/widgets/stat_chip.dart';
 import '../cards/card_edit_screen.dart';
 import '../cards/card_list_tile.dart';
 import '../cards/card_providers.dart';
 import '../sources/add_source_sheet.dart';
+import '../sources/source_detail_screen.dart';
+import '../sources/source_providers.dart';
+import '../sources/source_tile.dart';
+import 'arcade_app_bar.dart';
 
 /// 과목의 한 주차. 자료 목록·업로드, 직접 문제 쓰기, 이 주차 카드.
 class WeekScreen extends ConsumerWidget {
@@ -38,6 +41,15 @@ class WeekScreen extends ConsumerWidget {
     }
   }
 
+  void _write(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            CardEditScreen.create(subjectId: subject.id, week: week),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sources = ref.watch(
@@ -46,43 +58,57 @@ class WeekScreen extends ConsumerWidget {
     final cards = ref.watch(
       myCardsProvider((subjectId: subject.id, week: week)),
     );
+    final cardList = cards.value ?? const [];
+    final draftCount = cardList.where((c) => !c.isVerified).length;
 
     return Scaffold(
-      appBar: AppBar(title: Text(subject.name)),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _upload(context),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.button),
-        ),
-        icon: const Icon(Icons.add_photo_alternate_outlined),
-        label: const Text('자료 추가', style: AppTextStyles.button),
+      appBar: ArcadeAppBar(
+        trailing: [StatChip(label: subject.name, color: AppColors.paper)],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.page,
-          AppSpacing.sm,
+          0,
           AppSpacing.page,
-          AppSpacing.section * 4,
+          AppSpacing.section * 2,
         ),
         children: [
-          Text('$week주차', style: AppTextStyles.titleL),
+          ArcadeTitle(
+            title: '$week주차',
+            subtitle: cardList.isEmpty
+                ? '필기를 찍으면 AI가 카드를 만들어요'
+                : '카드 ${cardList.length}장'
+                      '${draftCount > 0 ? ' · 검수 기다리는 초안 $draftCount' : ''}',
+          ),
           const SizedBox(height: AppSpacing.section),
-          const Text('자료', style: AppTextStyles.heading),
+          ChunkyButton(
+            label: '필기 찍고 카드 뽑기',
+            icon: Icons.photo_camera_outlined,
+            large: true,
+            onPressed: () => _upload(context),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ChunkyButton(
+            label: '직접 문제 쓰기',
+            icon: Icons.edit_outlined,
+            color: AppColors.paper,
+            onPressed: () => _write(context),
+          ),
+          const SizedBox(height: AppSpacing.section),
+          const ArcadeSectionHeader(title: '자료'),
           const SizedBox(height: AppSpacing.md),
           sources.when(
             loading: () => const Padding(
               padding: EdgeInsets.all(AppSpacing.section),
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (e, _) => Text(
-              '자료를 불러오지 못했어요\n$e',
-              style: AppTextStyles.body.copyWith(color: AppColors.inkSub),
-            ),
+            error: (e, _) => ArcadeEmpty(message: '자료를 불러오지 못했어요\n$e'),
             data: (list) {
-              if (list.isEmpty) return _Empty(onUpload: () => _upload(context));
+              if (list.isEmpty) {
+                return const ArcadeEmpty(
+                  message: '아직 자료가 없어요.\n필기 사진이나 PDF를 올리면 AI가 요약하고 카드를 만들어요.',
+                );
+              }
               return Column(
                 children: [
                   for (final s in list) ...[
@@ -101,31 +127,14 @@ class WeekScreen extends ConsumerWidget {
             },
           ),
           const SizedBox(height: AppSpacing.section),
-          Row(
-            children: [
-              const Expanded(child: Text('카드', style: AppTextStyles.heading)),
-              TextButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => CardEditScreen.create(
-                      subjectId: subject.id,
-                      week: week,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('직접 쓰기'),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
+          const ArcadeSectionHeader(title: '카드'),
+          const SizedBox(height: AppSpacing.md),
           cards.when(
             loading: () => const SizedBox.shrink(),
-            error: (e, _) => Text('$e', style: AppTextStyles.caption),
+            error: (e, _) => ArcadeEmpty(message: '카드를 불러오지 못했어요\n$e'),
             data: (list) => list.isEmpty
-                ? Text(
-                    '아직 카드가 없어요. 자료를 올려 뽑거나 직접 써 보세요.',
-                    style: AppTextStyles.body.copyWith(color: AppColors.inkSub),
+                ? const ArcadeEmpty(
+                    message: '아직 카드가 없어요.\n자료를 올려 뽑거나 직접 써 보세요.',
                   )
                 : Column(
                     children: [
@@ -142,38 +151,6 @@ class WeekScreen extends ConsumerWidget {
                       ],
                     ],
                   ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Empty extends StatelessWidget {
-  const _Empty({required this.onUpload});
-
-  final VoidCallback onUpload;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.page),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      child: Column(
-        children: [
-          Text(
-            '아직 자료가 없어요.\n필기 사진이나 PDF를 올리면 AI가 카드를 만들어요.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.body.copyWith(color: AppColors.inkSub),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton.icon(
-            onPressed: onUpload,
-            icon: const Icon(Icons.add_photo_alternate_outlined),
-            label: const Text('자료 추가'),
           ),
         ],
       ),
