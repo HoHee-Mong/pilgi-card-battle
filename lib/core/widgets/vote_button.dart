@@ -1,12 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/bank/bank_repository.dart';
 import '../../fx/haptics.dart';
 import '../models/room.dart';
 import '../theme/tokens.dart';
-import 'pressable_scale.dart';
+import 'chunky_press.dart';
 
 /// "나올 것 같아요" 투표 버튼 (공용, `docs/DATA.md` 계약).
 ///
@@ -19,10 +20,14 @@ class VoteButton extends ConsumerStatefulWidget {
     required this.roomId,
     required this.cardId,
     this.uid,
+    this.compact = false,
   });
 
   final String roomId;
   final String cardId;
+
+  /// true면 별 + 숫자만 보이는 작은 버튼 (목록 오른쪽용)
+  final bool compact;
 
   /// 테스트용. 보통은 비워 두면 현재 로그인 사용자.
   final String? uid;
@@ -104,6 +109,7 @@ class _VoteButtonState extends ConsumerState<VoteButton> {
           count: _pendingCount ?? entry.voteCount,
           voted: _pendingVoted ?? (uid != null && entry.votedBy(uid)),
           onTap: uid == null ? null : () => _toggle(entry),
+          compact: widget.compact,
         );
       },
     );
@@ -111,52 +117,110 @@ class _VoteButtonState extends ConsumerState<VoteButton> {
 }
 
 /// 투표 버튼의 겉모양만 (데이터 없이 쓰거나 테스트할 때).
-class VoteChip extends StatelessWidget {
+///
+/// 블록 버튼 모양. 투표하면 lime으로 바뀌고 "+1"이 튀어 올랐다 사라진다.
+/// [compact]면 별 + 숫자만 보이는 작은 네모 (목록 오른쪽용).
+class VoteChip extends StatefulWidget {
   const VoteChip({
     super.key,
     required this.count,
     required this.voted,
     required this.onTap,
+    this.compact = false,
   });
 
   final int count;
   final bool voted;
   final VoidCallback? onTap;
+  final bool compact;
+
+  @override
+  State<VoteChip> createState() => _VoteChipState();
+}
+
+class _VoteChipState extends State<VoteChip> {
+  /// "+1"을 다시 띄울 때마다 바뀌는 키
+  int _pops = 0;
+
+  @override
+  void didUpdateWidget(VoteChip old) {
+    super.didUpdateWidget(old);
+    if (!old.voted && widget.voted) _pops++;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final voted = widget.voted;
+    final textStyle =
+        (widget.compact ? AppTextStyles.chip : AppTextStyles.button).copyWith(
+          color: AppColors.ink,
+        );
+    final star = Icon(
+      voted ? Icons.star_rounded : Icons.star_outline_rounded,
+      size: widget.compact ? 20 : 24,
+      color: AppColors.ink,
+    );
+
     return Semantics(
       button: true,
       toggled: voted,
-      label: '나올 것 같아요 $count표',
+      label: '나올 것 같아요 ${widget.count}표',
       excludeSemantics: true,
-      child: PressableScale(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: AppMotion.press,
-          curve: AppMotion.spring,
-          constraints: const BoxConstraints(minHeight: AppSpacing.minTouch),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: voted ? AppColors.lime : AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.chip),
-            border: Border.all(color: voted ? AppColors.lime : AppColors.line),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ChunkyPress(
+            onTap: widget.onTap,
+            color: voted ? AppColors.lime : AppColors.paper,
+            radius: widget.compact ? AppRadius.chip : AppRadius.button,
+            minWidth: AppSpacing.minTouch + AppSpacing.md,
+            height: widget.compact
+                ? AppSpacing.minTouch + AppSpacing.xs
+                : AppSpacing.button,
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.compact ? AppSpacing.md : AppSpacing.lg,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                star,
+                const SizedBox(width: AppSpacing.xs),
+                if (!widget.compact) ...[
+                  Text('나올 것 같아요', style: textStyle),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
+                _RollingCount(count: widget.count, style: textStyle),
+              ],
+            ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '나올 것 같아요',
-                style: AppTextStyles.label.copyWith(
-                  color: AppColors.ink,
-                  fontWeight: FontWeight.w700,
-                ),
+          if (_pops > 0)
+            Positioned(
+              key: ValueKey(_pops),
+              right: AppSpacing.sm,
+              top: -AppSpacing.md,
+              child: IgnorePointer(
+                child: Text('+1', style: AppTextStyles.heading)
+                    .animate()
+                    .moveY(
+                      begin: 0,
+                      end: -AppSpacing.section,
+                      duration: AppMotion.votePop,
+                      curve: Curves.easeOut,
+                    )
+                    .scaleXY(
+                      begin: 0.6,
+                      end: 1,
+                      duration: AppMotion.stamp,
+                      curve: AppMotion.spring,
+                    )
+                    .fadeOut(
+                      delay: AppMotion.votePop * 0.5,
+                      duration: AppMotion.votePop * 0.5,
+                    ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              _RollingCount(count: count),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -164,8 +228,9 @@ class VoteChip extends StatelessWidget {
 
 /// 숫자가 바뀌면 위(증가) 또는 아래(감소)로 굴러가며 바뀐다.
 class _RollingCount extends StatefulWidget {
-  const _RollingCount({required this.count});
+  const _RollingCount({required this.count, required this.style});
   final int count;
+  final TextStyle style;
 
   @override
   State<_RollingCount> createState() => _RollingCountState();
@@ -182,9 +247,7 @@ class _RollingCountState extends State<_RollingCount> {
 
   @override
   Widget build(BuildContext context) {
-    final style = AppTextStyles.label.copyWith(
-      color: AppColors.ink,
-      fontWeight: FontWeight.w800,
+    final style = widget.style.copyWith(
       fontFeatures: const [FontFeature.tabularFigures()],
     );
     return ClipRect(

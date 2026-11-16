@@ -73,6 +73,10 @@ abstract final class AppSpacing {
 
   /// 최소 터치 영역
   static const minTouch = 44.0;
+
+  /// 버튼 높이 (보통 / 화면 대표 버튼)
+  static const button = 56.0;
+  static const buttonLarge = 72.0;
 }
 
 abstract final class AppRadius {
@@ -213,9 +217,6 @@ abstract final class AppMotion {
   /// 버튼 눌림 (4px 내려감)
   static const press = Duration(milliseconds: 120);
 
-  /// 이전 PressableScale용 축소 비율 (새 코드는 [AppBlock.pressDepth])
-  static const pressScale = 0.96;
-
   /// 화면 전환
   static const pageTransition = Duration(milliseconds: 380);
 
@@ -237,6 +238,9 @@ abstract final class AppMotion {
   /// 정답: 보스 흔들림·축소 / "적중!" 도장 / 체력바 감소
   static const bossHit = Duration(milliseconds: 600);
   static const stamp = Duration(milliseconds: 500);
+
+  /// "적중!"/"빗나감" 도장이 쾅 찍히고(앞 [stamp]) 잠깐 머물다 사라지는 전체 시간
+  static const stampShow = Duration(milliseconds: 1250);
   static const hpBar = Duration(milliseconds: 700);
 
   /// 1위 왕관 살랑
