@@ -238,6 +238,9 @@ abstract final class AppMotion {
   /// 정답: 보스 흔들림·축소 / "적중!" 도장 / 체력바 감소
   static const bossHit = Duration(milliseconds: 600);
   static const stamp = Duration(milliseconds: 500);
+
+  /// "적중!"/"빗나감" 도장이 쾅 찍히고(앞 [stamp]) 잠깐 머물다 사라지는 전체 시간
+  static const stampShow = Duration(milliseconds: 1250);
   static const hpBar = Duration(milliseconds: 700);
 
   /// 1위 왕관 살랑
