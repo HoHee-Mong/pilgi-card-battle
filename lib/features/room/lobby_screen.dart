@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,11 +9,14 @@ import '../../core/models/subject.dart';
 import '../../core/router.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_button.dart';
+import '../../core/widgets/boss_sprite.dart';
 import '../../core/widgets/chunky_card.dart';
+import '../../core/widgets/outlined_text.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../bank/bank_repository.dart';
 import '../subjects/subject_providers.dart';
 import '../subjects/subject_utils.dart';
+import 'boss_preview_screen.dart';
 import 'room_providers.dart';
 
 final _bankCountProvider = StreamProvider.autoDispose.family<int, String>(
@@ -132,16 +136,40 @@ class _Profile extends StatelessWidget {
 }
 
 /// "이번 보스": 가장 가까운 시험. 없으면 시험일 정하기 안내.
-class _BossCard extends StatelessWidget {
+/// 보스를 누르면 한 대 때릴 수 있다 (적중! 연출 맛보기).
+class _BossCard extends StatefulWidget {
   const _BossCard({required this.boss});
   final Subject? boss;
 
   @override
+  State<_BossCard> createState() => _BossCardState();
+}
+
+class _BossCardState extends State<_BossCard> {
+  final _controller = BossController();
+
+  static const _bossSize = AppSpacing.minTouch * 2.2;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final boss = this.boss;
+    final boss = widget.boss;
     final dday = examDDayLabel(boss?.examDate);
     return ChunkyCard(
       onTap: boss == null ? () => context.go(AppRoutes.cards) : null,
+      // 개발용: 길게 누르면 보스 연출 미리보기 (배포 빌드에서는 꺼짐)
+      onLongPress: kDebugMode
+          ? () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const BossPreviewScreen(),
+              ),
+            )
+          : null,
       child: Row(
         children: [
           Expanded(
@@ -170,38 +198,29 @@ class _BossCard extends StatelessWidget {
               ],
             ),
           ),
-          if (dday != null) ...[
+          if (boss != null && dday != null) ...[
             const SizedBox(width: AppSpacing.md),
-            _OutlinedNumber(dday),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                BossSprite(
+                  hp: 1,
+                  maxHp: 1,
+                  size: _bossSize,
+                  controller: _controller,
+                  onTap: _controller.hit,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                OutlinedText(
+                  dday,
+                  style: AppTextStyles.titleM,
+                  color: AppColors.pink,
+                ),
+              ],
+            ),
           ],
         ],
       ),
-    );
-  }
-}
-
-/// "D-12"처럼 ink 외곽선을 두른 큰 pink 글자
-class _OutlinedNumber extends StatelessWidget {
-  const _OutlinedNumber(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = AppTextStyles.titleL;
-    return Stack(
-      children: [
-        Text(
-          text,
-          style: style.copyWith(
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = AppBlock.border * 2
-              ..strokeJoin = StrokeJoin.round
-              ..color = AppColors.ink,
-          ),
-        ),
-        Text(text, style: style.copyWith(color: AppColors.pink)),
-      ],
     );
   }
 }
