@@ -120,6 +120,8 @@ class RoomRepository {
       cardIds: room.cardIds,
       round: room.round,
       roundStartedAt: room.roundStartedAt,
+      battleId: room.battleId,
+      rematchVotes: room.rematchVotes,
       createdAt: room.createdAt,
     );
   }

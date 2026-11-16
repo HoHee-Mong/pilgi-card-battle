@@ -25,6 +25,15 @@ users/{uid}/progress/main               # 레벨·XP·연속 출석·오늘의 �
   # A는 카드 만들 때 ProgressRepository.record(uid, XpEvent.cardCreated),
   # 모의고사 제출 때 record(uid, XpEvent.mock)만 부르면 된다
 
+users/{uid}/battles/{battleId}          # 내 배틀 기록 (B). 결과 화면에서 한 번만 저장, 방을 지워도 남음
+  roomId, roomName: string
+  at: timestamp
+  myScore, rank, total, correct, bestCombo: int
+  outcome: "win" | "lose" | "draw"
+  opponents: [{ uid, nickname, score }]
+  rounds: [{ cardId, question, answer, correct }]   # 방이 지워져도 볼 수 있게 문제 글을 같이 저장
+  xp: int | null                         # 받은 XP (저장 뒤 채워짐)
+
 users/{uid}/cardMeta/{cardId}           # 사용자별 카드 상태 (A) — 모델 `lib/core/models/card_meta.dart`
   favorite: bool
   inWrongNote: bool
@@ -75,6 +84,8 @@ rooms/{roomId}                           # (B)
   cardIds: [string]                      # 배틀 출제 순서 (bank에서 voteCount 높은 순 우선)
   round: int                             # 현재 문제 index
   roundStartedAt: timestamp
+  battleId: string                       # 이번 판 ID, 시작할 때마다 새로 (배틀 기록 중복 방지, B 추가)
+  rematchVotes: [uid]                    # 끝난 판에서 "다시 대결하기" 누른 사람. 대기실 모두가 누르면 새 판 (B 추가)
   createdAt: timestamp
 
 rooms/{roomId}/bank/{cardId}             # 공동 문제은행 + 투표 (B)
