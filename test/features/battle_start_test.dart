@@ -55,4 +55,27 @@ void main() {
     );
     expect(startBlocker(room, 'host', bankCount: 5), isNotNull);
   });
+
+  group('다시 들어올 때 점수 유지', () {
+    final scored = {
+      'host': _host,
+      'a': const RoomPlayer(nickname: '승호', score: 900),
+    };
+
+    test('배틀 중에 있던 사람 → 유지', () {
+      final room = _room(players: scored, status: RoomStatus.playing);
+      expect(keepsPlayerOnEnter(room, 'a'), isTrue);
+    });
+
+    test('끝난 판(결과 화면)에 있던 사람 → 유지', () {
+      final room = _room(players: scored, status: RoomStatus.finished);
+      expect(keepsPlayerOnEnter(room, 'a'), isTrue);
+    });
+
+    test('대기실이거나 처음 온 사람 → 새로 넣음', () {
+      expect(keepsPlayerOnEnter(_room(players: scored), 'a'), isFalse);
+      final playing = _room(players: scored, status: RoomStatus.playing);
+      expect(keepsPlayerOnEnter(playing, 'new'), isFalse);
+    });
+  });
 }

@@ -77,6 +77,11 @@ String? startBlocker(Room room, String uid, {required int bankCount}) {
   return null;
 }
 
+/// 다시 들어올 때 점수를 그대로 둘지. 배틀 중이거나 끝난 뒤(결과 화면)에 이미 있던
+/// 사람은 점수·콤보를 지우지 않는다 (지우면 다른 사람 화면의 순위까지 바뀐다).
+bool keepsPlayerOnEnter(Room room, String uid) =>
+    room.status != RoomStatus.waiting && room.players.containsKey(uid);
+
 /// 대기실·배틀 진행 (`rooms/{roomId}`의 status·players·cardIds·round).
 ///
 /// `players`는 지금 대기실·배틀에 있는 사람, `memberIds`는 들어온 적 있는 사람이다.
@@ -89,7 +94,7 @@ class BattleRepository {
       _db.collection('rooms').doc(roomId);
 
   /// 대기실 입장: 나를 players에 넣는다 (준비 안 됨, 점수 0).
-  /// 이미 배틀 중이면 점수를 지우지 않고 닉네임만 갱신한다.
+  /// 이미 배틀 중이거나 끝난 판에 있던 사람이면 점수를 지우지 않고 닉네임만 갱신한다.
   Future<void> enter({
     required String roomId,
     required String uid,
@@ -101,8 +106,7 @@ class BattleRepository {
       final data = snap.data();
       if (data == null) throw const BattleException('방이 없어졌어요.');
       final current = Room.fromMap(snap.id, data);
-      final me = current.players[uid];
-      if (current.status == RoomStatus.playing && me != null) {
+      if (keepsPlayerOnEnter(current, uid)) {
         tx.update(room, {'players.$uid.nickname': nickname});
         return;
       }

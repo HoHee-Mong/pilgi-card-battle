@@ -517,7 +517,12 @@ class _AnswerArea extends StatelessWidget {
               enabled: canPick,
               textInputAction: TextInputAction.done,
               decoration: const InputDecoration(hintText: '답을 써 주세요'),
-              onSubmitted: canPick ? (v) => onPick!(v.trim()) : null,
+              // 빈칸으로 내면 바로 오답이 되니 막는다 (시간 초과는 따로 처리)
+              onSubmitted: canPick
+                  ? (v) {
+                      if (v.trim().isNotEmpty) onPick!(v.trim());
+                    }
+                  : null,
             ),
             const SizedBox(height: AppSpacing.sm),
             if (!revealed)
@@ -526,7 +531,10 @@ class _AnswerArea extends StatelessWidget {
                 color: AppColors.lime,
                 shadowColor: AppColors.grape,
                 onPressed: canPick
-                    ? () => onPick!(shortAnswer.text.trim())
+                    ? () {
+                        final v = shortAnswer.text.trim();
+                        if (v.isNotEmpty) onPick!(v);
+                      }
                     : null,
               ),
           ],
