@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/room.dart';
+import '../../core/models/card.dart';
 import '../bank/bank_repository.dart';
+import 'battle_rules.dart';
 
 final battleRepositoryProvider = Provider<BattleRepository>(
   (ref) => BattleRepository(FirebaseFirestore.instance),
@@ -13,6 +15,41 @@ const kBattleQuestionCounts = [5, 10];
 
 /// 배틀 최소 인원
 const kBattleMinPlayers = 2;
+
+/// `rooms/{roomId}/answers/{round_uid}` — 한 사람의 한 라운드 답.
+class BattleAnswer {
+  const BattleAnswer({
+    required this.uid,
+    required this.round,
+    required this.choice,
+    required this.correct,
+    required this.elapsedMs,
+  });
+
+  final String uid;
+  final int round;
+
+  /// 고른 답. 시간 초과면 빈 문자열.
+  final String choice;
+  final bool correct;
+  final int elapsedMs;
+
+  factory BattleAnswer.fromMap(Map<String, dynamic> map) => BattleAnswer(
+    uid: map['uid'] as String? ?? '',
+    round: (map['round'] as num?)?.toInt() ?? 0,
+    choice: map['choice'] as String? ?? '',
+    correct: map['correct'] as bool? ?? false,
+    elapsedMs: (map['elapsedMs'] as num?)?.toInt() ?? 0,
+  );
+
+  Map<String, dynamic> toMap() => {
+    'uid': uid,
+    'round': round,
+    'choice': choice,
+    'correct': correct,
+    'elapsedMs': elapsedMs,
+  };
+}
 
 /// 배틀 관련 실패. [message]는 화면에 그대로 보여 줄 수 있는 문구.
 class BattleException implements Exception {
@@ -148,6 +185,87 @@ class BattleRepository {
           'players.$p.combo': 0,
         },
       });
+    });
+  }
+
+  CollectionReference<Map<String, dynamic>> _answers(String roomId) =>
+      _room(roomId).collection('answers');
+
+  /// 이번 라운드에 들어온 답들 (실시간)
+  Stream<List<BattleAnswer>> watchAnswers(String roomId, int round) {
+    return _answers(roomId)
+        .where('round', isEqualTo: round)
+        .snapshots()
+        .map(
+          (snap) => [for (final d in snap.docs) BattleAnswer.fromMap(d.data())],
+        );
+  }
+
+  /// 내 답 제출 + 점수·콤보 반영. 같은 라운드에 두 번 내면 처음 것만 남는다.
+  /// 반환값: 맞았는지.
+  Future<bool> submit({
+    required String roomId,
+    required String uid,
+    required int round,
+    required QuizCard card,
+    required String choice,
+    required int elapsedMs,
+  }) {
+    final roomRef = _room(roomId);
+    final answerRef = _answers(roomId).doc('${round}_$uid');
+    final correct = BattleRules.isCorrect(card, choice);
+    return _db.runTransaction((tx) async {
+      final existing = await tx.get(answerRef);
+      if (existing.exists) {
+        return BattleAnswer.fromMap(existing.data()!).correct;
+      }
+      final snap = await tx.get(roomRef);
+      final room = Room.fromMap(snap.id, snap.data() ?? const {});
+      if (room.round != round) return false; // 이미 다음 문제로 넘어감
+      final me = room.players[uid];
+      final (gained, combo) = BattleRules.apply(
+        correct: correct,
+        elapsedMs: elapsedMs,
+        prevCombo: me?.combo ?? 0,
+      );
+      tx.set(
+        answerRef,
+        BattleAnswer(
+          uid: uid,
+          round: round,
+          choice: choice,
+          correct: correct,
+          elapsedMs: elapsedMs,
+        ).toMap(),
+      );
+      if (me != null) {
+        tx.update(roomRef, {
+          'players.$uid.score': me.score + gained,
+          'players.$uid.combo': combo,
+        });
+      }
+      return correct;
+    });
+  }
+
+  /// 방장: 다음 문제로. 마지막 문제였으면 끝(finished).
+  /// [fromRound]가 지금 라운드와 다르면(이미 넘어갔으면) 아무것도 안 한다.
+  Future<void> advance({required String roomId, required int fromRound}) {
+    final roomRef = _room(roomId);
+    return _db.runTransaction((tx) async {
+      final snap = await tx.get(roomRef);
+      final data = snap.data();
+      if (data == null) return;
+      final room = Room.fromMap(snap.id, data);
+      if (room.status != RoomStatus.playing || room.round != fromRound) return;
+      if (fromRound + 1 >= room.cardIds.length) {
+        tx.update(roomRef, {'status': RoomStatus.finished.name});
+      } else {
+        tx.update(roomRef, {
+          'round': fromRound + 1,
+          'roundStartedAt': FieldValue.serverTimestamp(),
+        });
+      }
     });
   }
 

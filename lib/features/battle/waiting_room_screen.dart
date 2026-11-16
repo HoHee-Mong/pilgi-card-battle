@@ -13,6 +13,7 @@ import '../../fx/haptics.dart';
 import '../bank/bank_repository.dart';
 import '../room/room_repository.dart';
 import 'battle_repository.dart';
+import 'battle_view.dart';
 
 final _roomProvider = StreamProvider.autoDispose.family<Room?, String>(
   (ref, roomId) => ref.watch(roomRepositoryProvider).watchRoom(roomId),
@@ -106,8 +107,10 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
     final bank = ref.watch(_bankProvider(widget.roomId)).value ?? const [];
     final uid = _uid ?? ref.watch(uidProvider);
 
+    final playing = room != null && room.status != RoomStatus.waiting;
     return Scaffold(
-      backgroundColor: AppColors.grape,
+      // 대기실은 grape, 배틀 중은 ink (시안: 모의고사 보스전 배경)
+      backgroundColor: playing ? AppColors.ink : AppColors.grape,
       body: SafeArea(
         child: room == null || uid == null
             ? const Center(
@@ -119,6 +122,14 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
   }
 
   Widget _body(Room room, List<BankEntry> bank, String uid) {
+    if (room.status != RoomStatus.waiting) {
+      return BattleView(
+        room: room,
+        uid: uid,
+        onBackToWaiting: () =>
+            _run(() => _battle.backToWaiting(roomId: widget.roomId)),
+      );
+    }
     final isHost = room.isHost(uid);
     final me = room.players[uid];
     final pickable = BankRepository.pickTopVoted(
@@ -164,13 +175,7 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
                 style: AppTextStyles.label.copyWith(color: AppColors.cream),
               ),
               const SizedBox(height: AppSpacing.section),
-              if (room.status == RoomStatus.playing)
-                _PlayingNotice(
-                  isHost: isHost,
-                  onBack: () =>
-                      _run(() => _battle.backToWaiting(roomId: widget.roomId)),
-                )
-              else ...[
+              ...[
                 _Players(room: room, myUid: uid),
                 const SizedBox(height: AppSpacing.section),
                 _Settings(
@@ -451,37 +456,6 @@ class _Choice extends StatelessWidget {
           label,
           style: AppTextStyles.chip.copyWith(color: onChunkyColor(color)),
         ),
-      ),
-    );
-  }
-}
-
-/// 배틀이 시작된 상태. 라운드 화면은 다음 작업에서 붙는다.
-class _PlayingNotice extends StatelessWidget {
-  const _PlayingNotice({required this.isHost, required this.onBack});
-
-  final bool isHost;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return ChunkyCard(
-      color: AppColors.lime,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('배틀이 시작됐어요!', style: AppTextStyles.titleM),
-          const SizedBox(height: AppSpacing.sm),
-          const Text('문제 풀기 화면은 다음 작업에서 붙어요.', style: AppTextStyles.bodyS),
-          if (isHost) ...[
-            const SizedBox(height: AppSpacing.lg),
-            ChunkyButton(
-              label: '대기실로 되돌리기',
-              color: AppColors.paper,
-              onPressed: onBack,
-            ),
-          ],
-        ],
       ),
     );
   }
