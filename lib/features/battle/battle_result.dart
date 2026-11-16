@@ -85,7 +85,9 @@ class _BattleResultState extends ConsumerState<BattleResult> {
 
   /// 이번 판으로 받은 XP (저장되면 채워짐)
   int? _gainedXp;
-  bool _xpRequested = false;
+
+  /// 이미 저장된 판을 다시 본 경우 (XP는 처음 볼 때 받음)
+  bool _alreadySaved = false;
 
   @override
   void initState() {
@@ -97,28 +99,40 @@ class _BattleResultState extends ConsumerState<BattleResult> {
     }
   }
 
-  void _saveOnce(List<BattleAnswer> answers) {
+  /// 내 답을 오답 노트에 저장하고, 새로 저장했을 때만 XP를 준다.
+  /// 끝난 방에 다시 들어오면 이미 저장된 답이라 둘 다 건너뛴다.
+  Future<void> _saveOnce(List<BattleAnswer> answers) async {
     if (_saved || answers.isEmpty || widget.cards.isEmpty) return;
     _saved = true;
-    ref
-        .read(battleRepositoryProvider)
-        .saveAttempts(
-          uid: widget.myUid,
-          cards: widget.cards,
-          answers: answers,
-          cardIds: widget.room.cardIds,
-        )
-        .catchError((_) => _saved = false);
-    // XP: 한 판 기본 + 점수 100점당 1 (퀘스트 "배틀 1판" 포함). 저장 재시도와 별개로 한 번만.
-    if (_gainedXp != null || _xpRequested) return;
-    _xpRequested = true;
+    final bool savedNow;
+    try {
+      savedNow = await ref
+          .read(battleRepositoryProvider)
+          .saveAttempts(
+            roomId: widget.room.id,
+            uid: widget.myUid,
+            cards: widget.cards,
+            answers: answers,
+            cardIds: widget.room.cardIds,
+          );
+    } catch (_) {
+      _saved = false; // 다음 화면 갱신 때 다시 시도
+      return;
+    }
+    if (!savedNow) {
+      if (mounted) setState(() => _alreadySaved = true);
+      return;
+    }
+    // XP: 한 판 기본 + 점수 100점당 1 (퀘스트 "배틀 1판" 포함)
     final myScore = widget.room.players[widget.myUid]?.score ?? 0;
-    ref
-        .read(progressRepositoryProvider)
-        .record(widget.myUid, XpEvent.battle, bonusXp: myScore ~/ 100)
-        .then((xp) {
-          if (mounted) setState(() => _gainedXp = xp);
-        });
+    try {
+      final xp = await ref
+          .read(progressRepositoryProvider)
+          .record(widget.myUid, XpEvent.battle, bonusXp: myScore ~/ 100);
+      if (mounted) setState(() => _gainedXp = xp);
+    } catch (_) {
+      // XP 저장 실패는 결과 화면을 막지 않는다
+    }
   }
 
   @override
@@ -188,7 +202,11 @@ class _BattleResultState extends ConsumerState<BattleResult> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: _StatTile(
-                    value: _gainedXp == null ? '…' : '+$_gainedXp',
+                    value: _alreadySaved
+                        ? '받음'
+                        : _gainedXp == null
+                        ? '…'
+                        : '+$_gainedXp',
                     label: '획득 XP',
                     color: AppColors.cyan,
                   ),

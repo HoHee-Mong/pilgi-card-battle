@@ -33,4 +33,12 @@ void main() {
   test('문제가 없으면 정답률 0', () {
     expect(BattleSummary.of(const [], 0).percent, 0);
   });
+
+  test('BattleAnswer: saved 표시를 읽고, 없으면 저장 전으로 본다', () {
+    final base = {'uid': 'a', 'round': 0, 'choice': 'O', 'correct': true};
+    expect(BattleAnswer.fromMap(base).saved, isFalse);
+    expect(BattleAnswer.fromMap({...base, 'saved': true}).saved, isTrue);
+    // 제출할 때 쓰는 값에는 saved가 없다 (저장 후에만 붙음)
+    expect(BattleAnswer.fromMap(base).toMap().containsKey('saved'), isFalse);
+  });
 }
