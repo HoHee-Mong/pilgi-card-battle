@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../fx/haptics.dart';
+import '../../fx/sound.dart';
 import '../theme/tokens.dart';
 import 'outlined_text.dart';
 
@@ -87,6 +88,8 @@ class _BossSpriteState extends State<BossSprite> with TickerProviderStateMixin {
   @override
   void didUpdateWidget(BossSprite old) {
     super.didUpdateWidget(old);
+    // 체력이 0이 되는 순간 격파음
+    if (old.hp > 0 && widget.hp <= 0) Sound.play(Sfx.bossDown);
     if (old.controller != widget.controller) {
       old.controller?.removeListener(_onReact);
       widget.controller?.addListener(_onReact);
@@ -101,8 +104,10 @@ class _BossSpriteState extends State<BossSprite> with TickerProviderStateMixin {
     _stamp.forward(from: 0);
     if (r == BossReaction.hit) {
       Haptics.light();
+      Sound.play(Sfx.correct);
     } else {
       Haptics.medium();
+      Sound.play(Sfx.wrong);
     }
   }
 

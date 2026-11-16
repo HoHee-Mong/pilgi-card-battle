@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/bank/bank_repository.dart';
 import '../../fx/haptics.dart';
+import '../../fx/sound.dart';
 import '../models/room.dart';
 import '../theme/tokens.dart';
 import 'chunky_press.dart';
@@ -76,6 +77,7 @@ class _VoteButtonState extends ConsumerState<VoteButton> {
       _pendingCount = entry.voteCount + (votedNow ? 1 : -1);
     });
     Haptics.light();
+    if (votedNow) Sound.play(Sfx.vote);
     try {
       await ref
           .read(bankRepositoryProvider)
