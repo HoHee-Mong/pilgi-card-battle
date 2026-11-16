@@ -5,6 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../fx/motion.dart';
+
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -244,7 +247,10 @@ class _BankScreenState extends ConsumerState<BankScreen> {
           key: ValueKey('row-${entry.cardId}'),
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: tile(i, entry)
-              .animate(key: ValueKey('${_sort.name}-${entry.cardId}'))
+              .animateOrStill(
+                context,
+                key: ValueKey('${_sort.name}-${entry.cardId}'),
+              )
               .fadeIn(
                 delay: AppMotion.listStagger * i,
                 duration: AppMotion.listItem,
@@ -617,7 +623,7 @@ class _TopTile extends StatelessWidget {
             left: AppSpacing.page,
             top: -_crownSize.height * 0.6,
             child: CustomPaint(size: _crownSize, painter: const _CrownPainter())
-                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .animateOrStill(context, onPlay: (c) => c.repeat(reverse: true))
                 .rotate(
                   begin: -0.012,
                   end: 0.012,

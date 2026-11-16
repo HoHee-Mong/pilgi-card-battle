@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../fx/game_settings.dart';
 import '../../fx/haptics.dart';
 import '../theme/layout.dart';
 import '../theme/tokens.dart';
@@ -8,7 +10,7 @@ import '../theme/tokens.dart';
 /// 하단 탭 4개(로비 / 문제은행 / 모의고사 / 내 카드)를 단 앱 뼈대.
 ///
 /// 시안: paper 바탕 + 위 ink 3px 선, 고른 탭은 pink 블록 알약.
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.shell});
 
   final StatefulNavigationShell shell;
@@ -22,7 +24,21 @@ class AppShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // "애니메이션 줄이기"를 켜면 아래 모든 화면에 disableAnimations로 알려 준다.
+    // 큰 글자 설정은 따르되, 버튼이 깨지지 않게 1.6배까지만.
+    final media = MediaQuery.of(context);
+    final reduce = ref.watch(reduceMotionProvider) || media.disableAnimations;
+    return MediaQuery(
+      data: media.copyWith(disableAnimations: reduce),
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: AppLayout.maxTextScale,
+        child: _scaffold(),
+      ),
+    );
+  }
+
+  Widget _scaffold() {
     return Scaffold(
       body: shell,
       bottomNavigationBar: AppTabBar(

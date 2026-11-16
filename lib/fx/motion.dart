@@ -1,8 +1,31 @@
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../core/theme/tokens.dart';
+
+/// 애니메이션을 줄여야 하는지: 앱 설정 "애니메이션 줄이기" 또는 기기의 "동작 줄이기".
+/// (앱 설정은 `AppShell`이 MediaQuery.disableAnimations로 내려 준다)
+bool motionReduced(BuildContext context) =>
+    MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+
+extension AnimateOrStill on Widget {
+  /// `.animate()`와 같지만, 애니메이션 줄이기면 움직이지 않고 끝난 모습으로 바로 보여 준다.
+  Animate animateOrStill(
+    BuildContext context, {
+    Key? key,
+    AnimateCallback? onPlay,
+  }) {
+    final still = motionReduced(context);
+    return animate(
+      key: key,
+      autoPlay: !still,
+      value: still ? 1 : null,
+      onPlay: still ? null : onPlay,
+    );
+  }
+}
 
 /// 카드 뒤집기 등장: Y축으로 90도 누운 상태에서 앞면으로 돌아온다 (원근감 0.001).
 /// [key]가 바뀔 때마다 다시 뒤집힌다 (예: 문제가 바뀔 때).
@@ -28,6 +51,7 @@ class _FlipInState extends State<FlipIn> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    if (motionReduced(context)) return widget.child;
     return AnimatedBuilder(
       animation: _t,
       builder: (context, child) => Transform(
@@ -71,6 +95,7 @@ class _ShakeState extends State<Shake> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    if (motionReduced(context)) return widget.child;
     return AnimatedBuilder(
       animation: _c,
       builder: (context, child) {

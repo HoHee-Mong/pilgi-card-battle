@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import '../core/theme/tokens.dart';
+import 'motion.dart';
 
 /// 결과 화면 색종이 낙하 (DESIGN.md 결과 모션). 한 번 떨어지고 끝난다.
 /// 누르기를 막지 않도록 위에 겹쳐 둔다.
@@ -52,6 +53,7 @@ class _ConfettiRainState extends State<ConfettiRain>
 
   @override
   Widget build(BuildContext context) {
+    if (motionReduced(context)) return const SizedBox.shrink();
     return IgnorePointer(
       child: RepaintBoundary(
         child: AnimatedBuilder(

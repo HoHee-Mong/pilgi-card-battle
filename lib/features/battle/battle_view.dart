@@ -426,18 +426,20 @@ class _Countdown extends StatelessWidget {
       child: Center(
         child:
             OutlinedText(
-              text,
-              key: ValueKey(text),
-              style: AppTextStyles.titleL.copyWith(
-                fontSize: AppSpacing.minTouch * 2.4,
-              ),
-              color: AppColors.sun,
-            ).animate().scaleXY(
-              begin: 1.8,
-              end: 1,
-              duration: AppMotion.stamp,
-              curve: AppMotion.spring,
-            ),
+                  text,
+                  key: ValueKey(text),
+                  style: AppTextStyles.titleL.copyWith(
+                    fontSize: AppSpacing.minTouch * 2.4,
+                  ),
+                  color: AppColors.sun,
+                )
+                .animateOrStill(context)
+                .scaleXY(
+                  begin: 1.8,
+                  end: 1,
+                  duration: AppMotion.stamp,
+                  curve: AppMotion.spring,
+                ),
       ),
     );
   }
@@ -618,14 +620,16 @@ class _RevealBanner extends StatelessWidget {
     return Column(
       children: [
         OutlinedText(
-          correct ? '적중!' : '빗나감',
-          color: correct ? AppColors.lime : AppColors.wrong,
-        ).animate().scaleXY(
-          begin: 2,
-          end: 1,
-          duration: AppMotion.stamp,
-          curve: AppMotion.spring,
-        ),
+              correct ? '적중!' : '빗나감',
+              color: correct ? AppColors.lime : AppColors.wrong,
+            )
+            .animateOrStill(context)
+            .scaleXY(
+              begin: 2,
+              end: 1,
+              duration: AppMotion.stamp,
+              curve: AppMotion.spring,
+            ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           '정답: ${card.answer}',
