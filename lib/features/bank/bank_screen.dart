@@ -18,6 +18,7 @@ import '../../fx/haptics.dart';
 import '../battle/waiting_room_screen.dart';
 import '../room/room_repository.dart';
 import '../room/room_sheets.dart';
+import '../room/room_stats_screen.dart';
 import 'bank_repository.dart';
 
 final _roomProvider = StreamProvider.autoDispose.family<Room?, String>(
@@ -264,6 +265,22 @@ class _Header extends StatelessWidget {
             onPressed: () => Navigator.of(context).maybePop(),
             child: const Icon(Icons.chevron_left_rounded),
           ),
+        if (room != null) ...[
+          if (canPop) const SizedBox(width: AppSpacing.sm),
+          // 우리 방 기록: 예상 적중왕·모의고사 점수 비교
+          ChunkyButton(
+            expand: false,
+            color: AppColors.sun,
+            semanticLabel: '우리 방 기록',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    RoomStatsScreen(roomId: room.id, roomName: room.name),
+              ),
+            ),
+            child: const Icon(Icons.emoji_events_rounded),
+          ),
+        ],
         const Spacer(),
         if (room != null)
           Flexible(
