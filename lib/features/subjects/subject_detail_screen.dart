@@ -9,6 +9,7 @@ import '../../core/widgets/stat_chip.dart';
 import '../../core/widgets/chunky_button.dart';
 import '../cards/card_providers.dart';
 import '../notebook/notebook_screen.dart';
+import '../solo/solo_setup_screen.dart';
 import 'arcade_app_bar.dart';
 import 'arcade_dialog.dart';
 import 'subject_form_sheet.dart';
@@ -112,15 +113,33 @@ class SubjectDetailScreen extends ConsumerWidget {
             children: [
               _BossCard(subject: subject, dday: dday, cardCount: cardCount),
               const SizedBox(height: AppSpacing.section),
-              ChunkyButton(
-                label: '족보 노트',
-                icon: Icons.menu_book_outlined,
-                color: AppColors.cyan,
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => NotebookScreen(subject: subject),
+              Row(
+                children: [
+                  Expanded(
+                    child: ChunkyButton(
+                      label: '혼자 풀기',
+                      icon: Icons.play_arrow_rounded,
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => SoloSetupScreen(subject: subject),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: ChunkyButton(
+                      label: '족보 노트',
+                      icon: Icons.menu_book_outlined,
+                      color: AppColors.cyan,
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => NotebookScreen(subject: subject),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.section),
               const ArcadeSectionHeader(title: '주차 선택'),
