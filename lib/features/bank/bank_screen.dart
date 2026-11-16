@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/card.dart';
 import '../../core/models/room.dart';
+import '../../core/theme/layout.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_button.dart';
 import '../../core/widgets/chunky_card.dart';
@@ -64,11 +65,10 @@ class _BankScreenState extends ConsumerState<BankScreen> {
       // 시안 맨 아래 어두운 버튼 자리. 모의고사(A)가 생기면 옆에 같이 둔다.
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.page,
-            AppSpacing.sm,
-            AppSpacing.page,
-            AppSpacing.sm,
+          padding: AppLayout.pagePadding(
+            context,
+            top: AppSpacing.sm,
+            bottom: AppSpacing.sm,
           ),
           child: ChunkyButton(
             label: '친구랑 배틀하기',
@@ -85,11 +85,10 @@ class _BankScreenState extends ConsumerState<BankScreen> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.page,
-            AppSpacing.lg,
-            AppSpacing.page,
-            AppSpacing.section * 3,
+          padding: AppLayout.pagePadding(
+            context,
+            top: AppSpacing.lg,
+            bottom: AppSpacing.section * 3,
           ),
           children: [
             _Header(room: room, canPop: canPop),
