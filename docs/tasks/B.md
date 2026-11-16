@@ -8,7 +8,7 @@
 - [x] `router.dart` + 하단 탭 4개(로비/문제은행/모의고사/내 카드) 뼈대, 로비 레이아웃
 - [ ] A의 모델이 오기 전까지 `QuizCard.sample()` 더미로 작업
 - [x] 모델 `Room`, `BankEntry`
-- [ ] 방 만들기(과목 선택) → 6자리 초대 코드 → 코드로 입장
+- [x] 방 만들기(과목 선택) → 6자리 초대 코드 → 코드로 입장
 - [x] `BankRepository`: `addCard`, `watchBank(정렬: 투표순/최신순/주차)`, `toggleVote`(트랜잭션), `topVoted(roomId, weeks, limit)` → A에게 알림
 - [x] 공동 문제은행 화면: 카드 목록, 작성자·출처, 정렬
 

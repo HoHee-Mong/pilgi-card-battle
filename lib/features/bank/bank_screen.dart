@@ -15,6 +15,7 @@ import '../../core/widgets/stat_chip.dart';
 import '../../core/widgets/vote_button.dart';
 import '../../fx/haptics.dart';
 import '../room/room_repository.dart';
+import '../room/room_sheets.dart';
 import 'bank_repository.dart';
 
 final _roomProvider = StreamProvider.autoDispose.family<Room?, String>(
@@ -180,7 +181,17 @@ class _Header extends StatelessWidget {
         const Spacer(),
         if (room != null)
           Flexible(
-            child: StatChip(label: '${room.name} · ${room.memberIds.length}명'),
+            child: Semantics(
+              button: true,
+              hint: '방 바꾸기·초대 코드',
+              child: GestureDetector(
+                onTap: () => showRoomPickerSheet(context),
+                child: StatChip(
+                  label: '${room.name} · ${room.memberIds.length}명',
+                  icon: Icons.expand_more_rounded,
+                ),
+              ),
+            ),
           ),
       ],
     );
