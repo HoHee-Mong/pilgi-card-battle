@@ -64,6 +64,7 @@ class Room {
     this.status = RoomStatus.waiting,
     this.players = const {},
     this.memberIds = const [],
+    this.memberNames = const {},
     this.cardIds = const [],
     this.round = 0,
     this.roundStartedAt,
@@ -93,6 +94,10 @@ class Room {
   /// (`players`는 배틀 대기실·점수용, 나가도 멤버로 남는다)
   final List<String> memberIds;
 
+  /// uid → 닉네임. 방에 들어온 적 있는 사람 이름표 (대기실을 나가도 남는다).
+  /// 투표한 사람 이름, 로비 친구 목록에 쓴다. 예전 방에는 없을 수 있다.
+  final Map<String, String> memberNames;
+
   /// 배틀 출제 순서 (bank에서 voteCount 높은 순 우선)
   final List<String> cardIds;
 
@@ -104,11 +109,15 @@ class Room {
   bool isHost(String uid) => hostId == uid;
   bool isMember(String uid) => memberIds.contains(uid);
 
-  /// 참가자 닉네임. 모르면 빈 문자열.
-  String nicknameOf(String uid) => players[uid]?.nickname ?? '';
+  /// 닉네임. 대기실 참가자 → 멤버 이름표 순으로 찾고, 모르면 빈 문자열.
+  String nicknameOf(String uid) {
+    final inRoom = players[uid]?.nickname ?? '';
+    return inRoom.isNotEmpty ? inRoom : memberNames[uid] ?? '';
+  }
 
   factory Room.fromMap(String id, Map<String, dynamic> map) {
     final rawPlayers = map['players'];
+    final rawNames = map['memberNames'];
     return Room(
       id: id,
       code: map['code'] as String? ?? '',
@@ -128,6 +137,12 @@ class Room {
             }
           : const {},
       memberIds: readStringList(map['memberIds']),
+      memberNames: rawNames is Map
+          ? {
+              for (final e in rawNames.entries)
+                if (e.value is String) e.key.toString(): e.value as String,
+            }
+          : const {},
       cardIds: readStringList(map['cardIds']),
       round: readInt(map['round']),
       roundStartedAt: readDateOrNull(map['roundStartedAt']),
@@ -146,6 +161,7 @@ class Room {
       'status': status.name,
       'players': {for (final e in players.entries) e.key: e.value.toMap()},
       'memberIds': memberIds,
+      'memberNames': memberNames,
       'cardIds': cardIds,
       'round': round,
       'roundStartedAt': roundStartedAt == null
@@ -169,6 +185,7 @@ class Room {
         'sample-user-2': RoomPlayer(nickname: '선우'),
       },
       memberIds: const ['sample-user', 'sample-user-2'],
+      memberNames: const {'sample-user': '승호', 'sample-user-2': '선우'},
       createdAt: DateTime(2026, 11, 12),
     );
   }
