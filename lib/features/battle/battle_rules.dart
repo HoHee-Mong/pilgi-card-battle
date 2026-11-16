@@ -11,6 +11,13 @@ abstract final class BattleRules {
   /// 정답 공개 후 다음 문제까지
   static const reveal = Duration(milliseconds: 2500);
 
+  /// 방장 기기가 멈춰 다음 문제로 안 넘어갈 때, 다른 사람이 대신 넘기기까지 더 기다리는 시간
+  static const hostStallGrace = Duration(seconds: 4);
+
+  /// 한 라운드 최대 길이 (카운트다운 + 문제 + 공개 + 여유)
+  static Duration get roundMax =>
+      countdown + answerTime + reveal + hostStallGrace;
+
   static const baseScore = 500;
   static const speedScore = 500;
   static const comboBonus = 100;
@@ -66,4 +73,16 @@ RoundPhase phaseAt(Duration elapsed, {required bool everyoneAnswered}) {
     return RoundPhase.question;
   }
   return RoundPhase.reveal;
+}
+
+/// 라운드를 (다시) 볼 때 시작 시각 추정.
+///
+/// 보통은 새 라운드를 받은 순간([now])부터 잰다. 앱을 내렸다 돌아오거나 배틀 중에
+/// 다시 들어왔을 때는 서버의 [roundStartedAt]을 써서 다른 사람과 타이머를 맞춘다.
+/// 서버 시각이 이상하면(미래이거나 너무 오래전) [now]를 쓴다.
+DateTime roundStartFor(DateTime? roundStartedAt, DateTime now) {
+  if (roundStartedAt == null) return now;
+  final ago = now.difference(roundStartedAt);
+  if (ago.isNegative || ago > BattleRules.roundMax) return now;
+  return roundStartedAt;
 }

@@ -56,7 +56,13 @@ class BattleView extends ConsumerStatefulWidget {
 
 class _BattleViewState extends ConsumerState<BattleView> {
   late int _round = widget.room.round;
-  DateTime _roundStart = DateTime.now();
+
+  /// 배틀 중에 (다시) 들어왔으면 서버 시각으로 다른 사람과 맞춘다.
+  late DateTime _roundStart = roundStartFor(
+    widget.room.roundStartedAt,
+    DateTime.now(),
+  );
+  late final AppLifecycleListener _lifecycle;
   DateTime? _revealAt;
   String? _myChoice;
   bool _submitted = false;
@@ -68,6 +74,18 @@ class _BattleViewState extends ConsumerState<BattleView> {
   void initState() {
     super.initState();
     _ticker = Timer.periodic(const Duration(milliseconds: 100), (_) => _tick());
+    // 앱을 내렸다 돌아오면 그사이 흐른 시간을 서버 시각으로 다시 맞춘다.
+    _lifecycle = AppLifecycleListener(
+      onResume: () {
+        if (!mounted) return;
+        setState(() {
+          _roundStart = roundStartFor(
+            widget.room.roundStartedAt,
+            DateTime.now(),
+          );
+        });
+      },
+    );
   }
 
   @override
@@ -87,6 +105,7 @@ class _BattleViewState extends ConsumerState<BattleView> {
   @override
   void dispose() {
     _ticker?.cancel();
+    _lifecycle.dispose();
     _shortAnswer.dispose();
     super.dispose();
   }
@@ -120,10 +139,14 @@ class _BattleViewState extends ConsumerState<BattleView> {
     if (phase == RoundPhase.reveal) {
       _revealAt ??= DateTime.now();
       if (!_submitted) _submit(''); // 시간 초과 = 오답 (콤보 끊김)
+      // 다음 문제로는 방장 기기가 넘긴다. 방장 기기가 멈췄으면(앱 꺼짐 등)
+      // 조금 더 기다렸다가 아무나 넘긴다 (advance는 라운드 번호로 중복을 막음).
+      final waited = DateTime.now().difference(_revealAt!);
       final isHost = widget.room.isHost(widget.uid);
-      if (isHost &&
-          !_advancing &&
-          DateTime.now().difference(_revealAt!) >= BattleRules.reveal) {
+      final due = isHost
+          ? waited >= BattleRules.reveal
+          : waited >= BattleRules.reveal + BattleRules.hostStallGrace;
+      if (due && !_advancing) {
         _advancing = true;
         ref
             .read(battleRepositoryProvider)
@@ -228,6 +251,13 @@ class _BattleViewState extends ConsumerState<BattleView> {
         ),
         const SizedBox(height: AppSpacing.section),
         ScoreBars(room: room, myUid: widget.uid),
+        if (room.players.length < kBattleMinPlayers) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _AloneNotice(
+            isHost: room.isHost(widget.uid),
+            onStop: widget.onBackToWaiting,
+          ),
+        ],
         const SizedBox(height: AppSpacing.section),
         if (phase == RoundPhase.countdown)
           _Countdown(left: BattleRules.countdown.inSeconds - _elapsed.inSeconds)
@@ -572,6 +602,42 @@ class _RevealBanner extends StatelessWidget {
           style: AppTextStyles.label.copyWith(color: AppColors.cream),
         ),
       ],
+    );
+  }
+}
+
+/// 친구가 다 나가고 혼자 남았을 때
+class _AloneNotice extends StatelessWidget {
+  const _AloneNotice({required this.isHost, required this.onStop});
+
+  final bool isHost;
+  final VoidCallback onStop;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChunkyCard(
+      color: AppColors.sun,
+      shadowColor: AppColors.grape,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text('친구가 나갔어요. 혼자 계속 풀 수 있어요.', style: AppTextStyles.bodyS),
+          ),
+          if (isHost) ...[
+            const SizedBox(width: AppSpacing.sm),
+            ChunkyButton(
+              label: '그만두기',
+              expand: false,
+              color: AppColors.paper,
+              onPressed: onStop,
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
