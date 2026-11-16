@@ -11,9 +11,31 @@ final myRoomsProvider = StreamProvider<List<Room>>((ref) {
   return ref.watch(roomRepositoryProvider).watchMyRooms(uid);
 });
 
-/// 지금 보고 있는 방. 방 고르기 화면이 생기기 전까지는 가장 최근 방.
+/// 사용자가 고른 방 id. 고른 적 없으면 null (→ 가장 최근 방).
+class SelectedRoomId extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void select(String roomId) => state = roomId;
+}
+
+final selectedRoomIdProvider = NotifierProvider<SelectedRoomId, String?>(
+  SelectedRoomId.new,
+);
+
+/// 지금 보고 있는 방. 고른 방이 목록에 있으면 그 방, 아니면 가장 최근 방.
 final currentRoomProvider = Provider<AsyncValue<Room?>>((ref) {
+  final selected = ref.watch(selectedRoomIdProvider);
   return ref
       .watch(myRoomsProvider)
-      .whenData((rooms) => rooms.isEmpty ? null : rooms.first);
+      .whenData((rooms) => pickCurrentRoom(rooms, selected));
 });
+
+/// [currentRoomProvider]의 고르는 규칙 (테스트용으로 분리)
+Room? pickCurrentRoom(List<Room> rooms, String? selectedId) {
+  if (rooms.isEmpty) return null;
+  for (final r in rooms) {
+    if (r.id == selectedId) return r;
+  }
+  return rooms.first;
+}
