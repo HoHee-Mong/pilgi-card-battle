@@ -1,5 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import '../../fx/motion.dart';
+
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -209,7 +212,7 @@ class _VoteChipState extends State<VoteChip> {
               top: -AppSpacing.md,
               child: IgnorePointer(
                 child: Text('+1', style: AppTextStyles.heading)
-                    .animate()
+                    .animateOrStill(context)
                     .moveY(
                       begin: 0,
                       end: -AppSpacing.section,

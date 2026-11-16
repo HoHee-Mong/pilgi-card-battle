@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../fx/haptics.dart';
+import '../../fx/motion.dart';
 import '../../fx/sound.dart';
 import '../theme/tokens.dart';
 import 'outlined_text.dart';
@@ -136,7 +137,7 @@ class _BossSpriteState extends State<BossSprite> with TickerProviderStateMixin {
       animation: Listenable.merge([_float, _react]),
       builder: (context, child) {
         // 둥둥: 한 바퀴(2.4s)에 위아래 한 번, 기울기는 반 박자 늦게 (격파되면 멈춤)
-        final still = mood == BossMood.defeated;
+        final still = mood == BossMood.defeated || motionReduced(context);
         final phase = _float.value * math.pi * 2;
         var dy = still ? 0.0 : math.sin(phase) * AppMotion.bossFloatY;
         var angle = still

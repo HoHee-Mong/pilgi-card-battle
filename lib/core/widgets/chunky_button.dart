@@ -57,7 +57,12 @@ class ChunkyButton extends StatelessWidget {
     final textStyle = (large ? AppTextStyles.buttonL : AppTextStyles.button)
         .copyWith(color: fg);
     final iconSize = large ? 28.0 : 22.0;
-    final height = large ? AppSpacing.buttonLarge : AppSpacing.button;
+    // 글자를 크게 해 둔 기기에서는 버튼도 그만큼 높게 (글자가 잘리지 않게)
+    final base = textStyle.fontSize ?? 16;
+    final grow = MediaQuery.textScalerOf(context).scale(base) / base;
+    final height =
+        (large ? AppSpacing.buttonLarge : AppSpacing.button) *
+        (grow < 1 ? 1 : grow);
 
     final Widget content;
     if (loading) {

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../fx/motion.dart';
+
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -166,14 +169,16 @@ class _BattleResultState extends ConsumerState<BattleResult> {
             Center(
               child:
                   OutlinedText(
-                    myRank == 1 ? '우승!' : '$myRank위',
-                    color: myRank == 1 ? AppColors.pink : AppColors.paper,
-                  ).animate().scaleXY(
-                    begin: 2,
-                    end: 1,
-                    duration: AppMotion.stamp,
-                    curve: AppMotion.spring,
-                  ),
+                        myRank == 1 ? '우승!' : '$myRank위',
+                        color: myRank == 1 ? AppColors.pink : AppColors.paper,
+                      )
+                      .animateOrStill(context)
+                      .scaleXY(
+                        begin: 2,
+                        end: 1,
+                        duration: AppMotion.stamp,
+                        curve: AppMotion.spring,
+                      ),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(

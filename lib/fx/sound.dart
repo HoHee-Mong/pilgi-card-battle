@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/theme/tokens.dart';
+import 'game_settings.dart';
 
 /// 효과음 5종 (`assets/sounds`, 직접 합성한 짧은 소리). DESIGN.md 사운드 항목.
 enum Sfx {
@@ -33,6 +34,7 @@ abstract final class Sound {
     try {
       _prefs = await SharedPreferences.getInstance();
       _enabled = _prefs!.getBool(_prefKey) ?? true;
+      GameSettings.load(_prefs!);
     } catch (e) {
       debugPrint('사운드 설정 읽기 실패: $e');
       _enabled = true;

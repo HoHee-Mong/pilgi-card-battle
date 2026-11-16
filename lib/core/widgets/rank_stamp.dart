@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../fx/motion.dart';
+
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../theme/tokens.dart';
@@ -34,7 +37,7 @@ class RankStamp extends StatelessWidget {
                   size: Size.square(starSize),
                   painter: const _StarPainter(),
                 )
-                .animate(onPlay: (c) => c.repeat())
+                .animateOrStill(context, onPlay: (c) => c.repeat())
                 .rotate(duration: AppMotion.starSpin),
             Container(
                   width: size,
@@ -61,7 +64,7 @@ class RankStamp extends StatelessWidget {
                     strokeWidth: AppBlock.border * 3,
                   ),
                 )
-                .animate()
+                .animateOrStill(context)
                 .scaleXY(
                   begin: 2.2,
                   end: 1,
