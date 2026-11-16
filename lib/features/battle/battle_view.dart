@@ -59,6 +59,7 @@ class BattleView extends ConsumerStatefulWidget {
 
 class _BattleViewState extends ConsumerState<BattleView> {
   late int _round = widget.room.round;
+  late String _battleId = widget.room.battleId;
 
   /// 배틀 중에 (다시) 들어왔으면 서버 시각으로 다른 사람과 맞춘다.
   late DateTime _roundStart = roundStartFor(
@@ -100,8 +101,9 @@ class _BattleViewState extends ConsumerState<BattleView> {
   @override
   void didUpdateWidget(BattleView old) {
     super.didUpdateWidget(old);
-    if (widget.room.round != _round) {
+    if (widget.room.round != _round || widget.room.battleId != _battleId) {
       _round = widget.room.round;
+      _battleId = widget.room.battleId;
       _roundStart = DateTime.now();
       _revealAt = null;
       _myChoice = null;
