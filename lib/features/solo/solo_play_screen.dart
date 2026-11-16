@@ -30,6 +30,9 @@ class _SoloPlayScreenState extends ConsumerState<SoloPlayScreen> {
   final List<QuizResult> _results = [];
   bool _finishing = false;
 
+  /// 기록 저장 중 (결과 화면으로 넘어가기 전 잠깐)
+  bool _saving = false;
+
   QuizCard get _card => widget.cards[_index];
   int get _correct => countCorrect(_results);
 
@@ -50,6 +53,7 @@ class _SoloPlayScreenState extends ConsumerState<SoloPlayScreen> {
   Future<void> _finish() async {
     if (_finishing) return;
     _finishing = true;
+    setState(() => _saving = true);
     final uid = ref.read(uidProvider);
     if (uid != null && _results.isNotEmpty) {
       final repo = ref.read(attemptRepositoryProvider);
@@ -75,6 +79,7 @@ class _SoloPlayScreenState extends ConsumerState<SoloPlayScreen> {
       }
     }
     if (!mounted) return;
+    setState(() => _saving = false);
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<String>(
         builder: (_) => SoloResultScreen(
@@ -151,6 +156,27 @@ class _SoloPlayScreenState extends ConsumerState<SoloPlayScreen> {
             onNext: _next,
             nextLabel: _index + 1 < total ? '다음 문제' : '결과 보기',
           ),
+          if (_saving) ...[
+            const SizedBox(height: AppSpacing.section),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: AppColors.lime,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  '기록 저장 중…',
+                  style: AppTextStyles.label.copyWith(color: AppColors.paper),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

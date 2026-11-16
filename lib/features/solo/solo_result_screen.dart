@@ -206,16 +206,19 @@ class _Stat extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text.rich(
-            TextSpan(
-              text: value,
-              style: AppTextStyles.titleL,
-              children: [
-                if (suffix != null)
-                  TextSpan(text: suffix, style: AppTextStyles.heading),
-              ],
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text.rich(
+              TextSpan(
+                text: value,
+                style: AppTextStyles.titleL,
+                children: [
+                  if (suffix != null)
+                    TextSpan(text: suffix, style: AppTextStyles.heading),
+                ],
+              ),
+              maxLines: 1,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
