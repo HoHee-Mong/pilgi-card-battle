@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/auth/user_profile.dart';
 import '../../core/auth/account_sheet.dart';
+import '../../core/auth/auth_service.dart';
+import '../../core/auth/nickname_setup_sheet.dart';
 import '../../core/models/room.dart';
 import '../../core/models/subject.dart';
 import '../../core/router.dart';
@@ -137,6 +139,26 @@ class _Profile extends ConsumerStatefulWidget {
 }
 
 class _ProfileState extends ConsumerState<_Profile> {
+  /// 이번 화면에서 "이름 정하기"를 이미 띄웠는지
+  bool _setupShown = false;
+
+  void _maybeAskName(UserProfile? profile) {
+    if (_setupShown || profile == null || profile.nicknameSet) return;
+    if (!authService.isGoogle) return;
+    _setupShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final google = authService.googleName ?? '';
+      showNicknameSetupSheet(
+        context,
+        suggested: google.isNotEmpty ? google : profile.nickname,
+        onSaved: (uid, name) => ref
+            .read(roomRepositoryProvider)
+            .renameEverywhere(uid: uid, nickname: name),
+      );
+    });
+  }
+
   static const _avatar = AppSpacing.minTouch + AppSpacing.lg;
 
   @override
@@ -151,6 +173,7 @@ class _ProfileState extends ConsumerState<_Profile> {
   @override
   Widget build(BuildContext context) {
     final nickname = widget.nickname;
+    _maybeAskName(ref.watch(userProfileProvider).value);
     final progress = ref.watch(myProgressProvider).value ?? const Progress();
     final (level, into, need) = levelOf(progress.xp);
     final next = nextTitle(level);

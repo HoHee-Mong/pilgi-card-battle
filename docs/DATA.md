@@ -10,6 +10,8 @@ Firebase: Auth(Google 로그인 또는 게스트=익명 + 닉네임. 게스트�
 users/{uid}
   nickname: string
   createdAt: timestamp
+  nicknameSet: bool                      # Google 로그인 뒤 "이름 정하기"를 끝냈는지 (B 추가)
+  nicknameChanges: int                   # 이름 바꾼 횟수, 3번까지 (처음 정하기는 안 셈, B 추가)
 
 users/{uid}/attempts/{attemptId}        # 풀이 기록 (A가 쓰고, B도 배틀 결과를 여기에 쓴다)
   cardId, subjectId, concept: string

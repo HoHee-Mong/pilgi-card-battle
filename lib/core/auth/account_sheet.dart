@@ -94,9 +94,11 @@ class _AccountFormState extends ConsumerState<_AccountForm> {
       _saved = null;
     });
     try {
-      await ref.read(userProfileRepositoryProvider).setNickname(uid, name);
+      await ref.read(userProfileRepositoryProvider).changeNickname(uid, name);
       await widget.onNicknameChanged?.call(uid, name);
       if (mounted) setState(() => _saved = '이름을 "$name"(으)로 바꿨어요');
+    } on NicknameException catch (e) {
+      if (mounted) setState(() => _error = e.message);
     } catch (_) {
       if (mounted) setState(() => _error = '이름을 바꾸지 못했어요. 잠시 후 다시 해 주세요.');
     } finally {
@@ -110,6 +112,9 @@ class _AccountFormState extends ConsumerState<_AccountForm> {
     final google = auth.isGoogle;
     final email = auth.user?.email;
     final current = ref.watch(nicknameProvider).value;
+    final left =
+        ref.watch(userProfileProvider).value?.changesLeft ??
+        kMaxNicknameChanges;
     if (!_nameLoaded && current != null) {
       _nameLoaded = true;
       _name.text = current;
@@ -121,7 +126,10 @@ class _AccountFormState extends ConsumerState<_AccountForm> {
       children: [
         const Text('내 계정', style: AppTextStyles.titleM),
         const SizedBox(height: AppSpacing.section),
-        const Text('친구들에게 보이는 이름', style: AppTextStyles.label),
+        Text(
+          '친구들에게 보이는 이름 · 남은 변경 $left/$kMaxNicknameChanges회',
+          style: AppTextStyles.label,
+        ),
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
@@ -142,7 +150,7 @@ class _AccountFormState extends ConsumerState<_AccountForm> {
               label: '바꾸기',
               expand: false,
               color: AppColors.sun,
-              onPressed: _busy ? null : _saveName,
+              onPressed: _busy || left == 0 ? null : _saveName,
             ),
           ],
         ),
