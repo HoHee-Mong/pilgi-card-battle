@@ -10,11 +10,18 @@ String cardTypeShort(CardType t) => switch (t) {
 };
 
 /// 카드 목록 한 줄: 유형, 상태, 문제, 개념 태그.
+/// [similarCount]가 0보다 크면 "비슷한 문제 N" 표시를 붙인다.
 class CardListTile extends StatelessWidget {
-  const CardListTile({super.key, required this.card, required this.onTap});
+  const CardListTile({
+    super.key,
+    required this.card,
+    required this.onTap,
+    this.similarCount = 0,
+  });
 
   final QuizCard card;
   final VoidCallback onTap;
+  final int similarCount;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +50,10 @@ class CardListTile extends StatelessWidget {
                         ? AppColors.lime
                         : scheme.surfaceContainerHighest,
                   ),
+                  if (similarCount > 0) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    _Tag('비슷한 문제 $similarCount', color: scheme.errorContainer),
+                  ],
                   const Spacer(),
                   if (card.concept.isNotEmpty)
                     Flexible(

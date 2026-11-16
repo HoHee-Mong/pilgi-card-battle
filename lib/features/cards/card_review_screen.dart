@@ -6,6 +6,7 @@ import '../../core/theme/tokens.dart';
 import 'card_edit_screen.dart';
 import 'card_list_tile.dart';
 import 'card_providers.dart';
+import 'card_similarity.dart';
 
 /// 자료 하나로 만든 카드 검수 목록. 초안이 위로 온다.
 class CardReviewScreen extends ConsumerWidget {
@@ -66,6 +67,18 @@ class CardReviewScreen extends ConsumerWidget {
           }
           final drafts = list.where((c) => !c.isVerified).toList();
           final verified = list.where((c) => c.isVerified).toList();
+          // 같은 과목의 내 카드 전체와 비교해 비슷한 문제가 있는 카드를 표시한다.
+          final pool =
+              ref
+                  .watch(
+                    myCardsProvider((
+                      subjectId: list.first.subjectId,
+                      week: null,
+                    )),
+                  )
+                  .value ??
+              list;
+          final similarCounts = CardSimilarity.countWithin(list, pool);
           return ListView(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.page,
@@ -93,6 +106,7 @@ class CardReviewScreen extends ConsumerWidget {
               for (final c in [...drafts, ...verified]) ...[
                 CardListTile(
                   card: c,
+                  similarCount: similarCounts[c.id] ?? 0,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => CardEditScreen.edit(card: c),
