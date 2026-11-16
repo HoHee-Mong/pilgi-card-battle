@@ -15,10 +15,14 @@ import '../../core/widgets/chunky_card.dart';
 import '../../core/widgets/outlined_text.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../../fx/sound.dart';
+import '../../core/auth/auth_providers.dart';
+import '../../core/models/progress.dart';
 import '../bank/bank_repository.dart';
 import '../subjects/subject_providers.dart';
 import '../subjects/subject_utils.dart';
 import 'boss_preview_screen.dart';
+import 'progress_repository.dart';
+import 'progress_rules.dart';
 import 'room_providers.dart';
 
 final _bankCountProvider = StreamProvider.autoDispose.family<int, String>(
@@ -71,6 +75,8 @@ class LobbyScreen extends ConsumerWidget {
                 const Expanded(child: _MockCard()),
               ],
             ),
+            const SizedBox(height: AppSpacing.section),
+            const _Quests(),
           ],
         ),
       ),
@@ -91,49 +97,214 @@ Subject? nextExam(List<Subject> subjects, {DateTime? now}) {
   return best;
 }
 
-class _Profile extends StatelessWidget {
+/// 프로필 줄: 첫 글자, 닉네임, 레벨·칭호, 연속 출석, 효과음 버튼 + 다음 칭호까지 XP 막대.
+/// 로비를 열면 오늘 출석을 기록한다.
+class _Profile extends ConsumerStatefulWidget {
   const _Profile({required this.nickname});
   final String nickname;
 
+  @override
+  ConsumerState<_Profile> createState() => _ProfileState();
+}
+
+class _ProfileState extends ConsumerState<_Profile> {
   static const _avatar = AppSpacing.minTouch + AppSpacing.lg;
 
   @override
+  void initState() {
+    super.initState();
+    final uid = ref.read(uidProvider);
+    if (uid != null) {
+      ref.read(progressRepositoryProvider).checkIn(uid).ignore();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final nickname = widget.nickname;
+    final progress = ref.watch(myProgressProvider).value ?? const Progress();
+    final (level, into, need) = levelOf(progress.xp);
+    final next = nextTitle(level);
     final initial = nickname.isEmpty ? '?' : nickname.characters.first;
-    return Row(
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          width: _avatar,
-          height: _avatar,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.lime,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.ink, width: AppBlock.border),
-          ),
-          child: Text(initial, style: AppTextStyles.heading),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                nickname.isEmpty ? '반가워요' : nickname,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.heading.copyWith(color: AppColors.paper),
+        Row(
+          children: [
+            Container(
+              width: _avatar,
+              height: _avatar,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.lime,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.ink,
+                  width: AppBlock.border,
+                ),
               ),
-              Text(
-                '오늘도 같이 예상 문제 모아 봐요',
-                style: AppTextStyles.label.copyWith(color: AppColors.cream),
+              child: Text(initial, style: AppTextStyles.heading),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nickname.isEmpty ? '반가워요' : nickname,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.heading.copyWith(
+                      color: AppColors.paper,
+                    ),
+                  ),
+                  Text(
+                    'Lv.$level ${titleOf(level)}',
+                    style: AppTextStyles.label.copyWith(color: AppColors.cream),
+                  ),
+                ],
+              ),
+            ),
+            if (progress.streak > 0) ...[
+              const SizedBox(width: AppSpacing.sm),
+              StatChip(
+                label: '${progress.streak}일 연속',
+                icon: Icons.local_fire_department_rounded,
+                color: AppColors.sun,
               ),
             ],
+            const SizedBox(width: AppSpacing.sm),
+            const _SoundToggle(),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                next == null
+                    ? '최고 칭호 달성!'
+                    : '다음 칭호 ‘${next.$2}’까지 (Lv.${next.$1})',
+                style: AppTextStyles.label.copyWith(color: AppColors.cream),
+              ),
+            ),
+            Text(
+              '$into / $need XP',
+              style: AppTextStyles.chip.copyWith(color: AppColors.cream),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _XpBar(ratio: need == 0 ? 0 : into / need),
+      ],
+    );
+  }
+}
+
+class _XpBar extends StatelessWidget {
+  const _XpBar({required this.ratio});
+  final double ratio;
+
+  static const _height = AppSpacing.minTouch * 0.45;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: _height,
+      padding: const EdgeInsets.all(AppSpacing.xs / 2),
+      decoration: BoxDecoration(
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: AppColors.ink, width: AppBlock.border),
+      ),
+      child: LayoutBuilder(
+        builder: (context, c) => Align(
+          alignment: Alignment.centerLeft,
+          child: AnimatedContainer(
+            duration: AppMotion.scoreBar,
+            curve: AppMotion.spring,
+            width: c.maxWidth * ratio.clamp(0.0, 1.0),
+            decoration: BoxDecoration(
+              color: AppColors.lime,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
-        const _SoundToggle(),
-      ],
+      ),
+    );
+  }
+}
+
+/// 오늘의 퀘스트 (다 채우면 자동으로 XP 지급)
+class _Quests extends ConsumerWidget {
+  const _Quests();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final raw = ref.watch(myProgressProvider).value ?? const Progress();
+    // 날짜가 바뀐 뒤 아직 기록이 없으면 오늘 기준 0으로 보여 준다
+    final p = rollDay(raw, dayKey(DateTime.now()));
+    return ChunkyCard(
+      title: '오늘의 퀘스트',
+      child: Column(
+        children: [
+          for (final q in kDailyQuests)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Row(
+                children: [
+                  _CheckBox(done: q.doneBy(p)),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(
+                      q.target > 1
+                          ? '${q.title} ${q.progressOf(p)}/${q.target}'
+                          : q.title,
+                      style: AppTextStyles.bodyS.copyWith(
+                        fontWeight: FontWeight.w700,
+                        decoration: q.doneBy(p)
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '+${q.xp} XP',
+                    style: AppTextStyles.chip.copyWith(color: AppColors.grape),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CheckBox extends StatelessWidget {
+  const _CheckBox({required this.done});
+  final bool done;
+
+  static const _size = AppSpacing.minTouch * 0.7;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: _size,
+      height: _size,
+      decoration: BoxDecoration(
+        color: done ? AppColors.lime : AppColors.paper,
+        borderRadius: BorderRadius.circular(AppRadius.chip / 2),
+        border: Border.all(color: AppColors.ink, width: AppBlock.border),
+      ),
+      child: done
+          ? const Icon(
+              Icons.check_rounded,
+              color: AppColors.ink,
+              size: _size * 0.7,
+            )
+          : null,
     );
   }
 }

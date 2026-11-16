@@ -17,6 +17,14 @@ users/{uid}/attempts/{attemptId}        # 풀이 기록 (A가 쓰고, B도 배�
   mode: "solo" | "battle" | "mock"
   at: timestamp
 
+users/{uid}/progress/main               # 레벨·XP·연속 출석·오늘의 퀘스트 (B, P2) — 모델 `lib/core/models/progress.dart`
+  xp, streak: int
+  lastActive, day: string                # yyyy-MM-dd (기기 날짜)
+  votes, cards, battles, mocks: int      # 오늘(day) 카운터
+  claimed: [string]                      # 오늘 보상 받은 퀘스트 id
+  # A는 카드 만들 때 ProgressRepository.record(uid, XpEvent.cardCreated),
+  # 모의고사 제출 때 record(uid, XpEvent.mock)만 부르면 된다
+
 users/{uid}/cardMeta/{cardId}           # 사용자별 카드 상태 (A) — 모델 `lib/core/models/card_meta.dart`
   favorite: bool
   inWrongNote: bool
