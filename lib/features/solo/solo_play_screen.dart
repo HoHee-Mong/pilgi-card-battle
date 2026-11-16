@@ -80,7 +80,9 @@ class _SoloPlayScreenState extends ConsumerState<SoloPlayScreen> {
     }
     if (!mounted) return;
     setState(() => _saving = false);
-    Navigator.of(context).pushReplacement(
+    // 결과 화면의 "끝내기"/"한 판 더" 값을 설정 화면까지 그대로 전달한다.
+    // (pushReplacement는 원래 route의 Future를 바로 null로 끝내므로 push → pop으로 넘긴다)
+    final outcome = await Navigator.of(context).push<String>(
       MaterialPageRoute<String>(
         builder: (_) => SoloResultScreen(
           subject: widget.subject,
@@ -89,6 +91,8 @@ class _SoloPlayScreenState extends ConsumerState<SoloPlayScreen> {
         ),
       ),
     );
+    if (!mounted) return;
+    Navigator.of(context).pop(outcome);
   }
 
   Future<void> _quit() async {
