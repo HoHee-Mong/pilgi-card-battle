@@ -20,6 +20,7 @@ import '../../fx/sound.dart';
 import '../room/progress_repository.dart';
 import '../room/progress_rules.dart';
 import '../bank/bank_repository.dart';
+import 'battle_record.dart';
 import 'battle_repository.dart';
 
 final _myAnswersProvider = StreamProvider.autoDispose
@@ -109,6 +110,13 @@ class _BattleResultState extends ConsumerState<BattleResult> {
     if (_saved || answers.isEmpty || widget.cards.isEmpty) return;
     _saved = true;
     final bool savedNow;
+    final record = buildBattleRecord(
+      room: widget.room,
+      myUid: widget.myUid,
+      cards: widget.cards,
+      answers: answers,
+      at: DateTime.now(),
+    );
     try {
       savedNow = await ref
           .read(battleRepositoryProvider)
@@ -118,6 +126,7 @@ class _BattleResultState extends ConsumerState<BattleResult> {
             cards: widget.cards,
             answers: answers,
             cardIds: widget.room.cardIds,
+            record: record,
           );
     } catch (_) {
       _saved = false; // 다음 화면 갱신 때 다시 시도
@@ -134,6 +143,9 @@ class _BattleResultState extends ConsumerState<BattleResult> {
           .read(progressRepositoryProvider)
           .record(widget.myUid, XpEvent.battle, bonusXp: myScore ~/ 100);
       if (mounted) setState(() => _gainedXp = xp);
+      await ref
+          .read(battleRepositoryProvider)
+          .setRecordXp(widget.myUid, record, xp);
     } catch (_) {
       // XP 저장 실패는 결과 화면을 막지 않는다
     }

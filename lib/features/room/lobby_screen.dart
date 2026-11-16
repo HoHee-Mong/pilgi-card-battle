@@ -27,6 +27,7 @@ import 'progress_rules.dart';
 import 'room_providers.dart';
 import 'room_repository.dart';
 import 'room_sheets.dart';
+import '../battle/battle_history_screen.dart';
 import '../battle/waiting_room_screen.dart';
 import '../bank/upload_cards_sheet.dart';
 
@@ -92,6 +93,17 @@ class LobbyScreen extends ConsumerWidget {
                 onPressed: () => openBattle(context, room),
               ),
             ],
+            const SizedBox(height: AppSpacing.sm),
+            ChunkyButton(
+              label: '내 배틀 기록',
+              icon: Icons.history_rounded,
+              color: AppColors.paper,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const BattleHistoryScreen(),
+                ),
+              ),
+            ),
             const SizedBox(height: AppSpacing.section),
             const _Quests(),
           ],
