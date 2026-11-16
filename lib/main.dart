@@ -11,20 +11,11 @@ import 'firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await _ensureSignedIn();
+  // 지난번 로그인을 먼저 불러온다 (안 그러면 잠깐 로그인 화면이 깜빡임)
+  await FirebaseAuth.instance.authStateChanges().first;
   await Sound.init();
+  // 로그인은 앱 안 로그인 화면에서 한다 (core/auth/auth_service.dart)
   runApp(const ProviderScope(child: PilgiApp()));
-}
-
-/// 익명 로그인. 이미 로그인돼 있으면 그대로 쓴다.
-Future<void> _ensureSignedIn() async {
-  final auth = FirebaseAuth.instance;
-  if (auth.currentUser != null) return;
-  try {
-    await auth.signInAnonymously();
-  } on FirebaseAuthException catch (e) {
-    debugPrint('익명 로그인 실패: ${e.code} ${e.message}');
-  }
 }
 
 /// 앱 루트. 화면 경로와 하단 탭은 `core/router.dart`.

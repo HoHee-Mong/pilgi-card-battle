@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../features/bank/bank_tab.dart';
 import '../features/room/lobby_screen.dart';
 import '../features/subjects/subject_list_screen.dart';
+import 'auth/auth_service.dart';
+import 'auth/login_screen.dart';
 import 'theme/tokens.dart';
 import 'widgets/app_shell.dart';
 
@@ -12,6 +14,7 @@ import 'widgets/app_shell.dart';
 /// 하단 탭 4개는 각자 자기 Navigator를 가진다. 탭 안에서 `Navigator.of(context).push`로
 /// 연 화면은 하단 탭이 보이는 채로 쌓이고, 탭을 바꿔도 쌓인 화면이 유지된다.
 abstract final class AppRoutes {
+  static const login = '/login';
   static const lobby = '/lobby';
   static const bank = '/bank';
   static const mock = '/mock';
@@ -20,7 +23,12 @@ abstract final class AppRoutes {
 
 final appRouter = GoRouter(
   initialLocation: AppRoutes.lobby,
+  // 로그인 전이면 로그인 화면으로, 로그인하면 로비로
+  refreshListenable: authService,
+  redirect: (context, state) =>
+      loginRedirect(canEnter: authService.canEnter, at: state.matchedLocation),
   routes: [
+    GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => AppShell(shell: shell),
       branches: [
@@ -76,4 +84,11 @@ class _ComingSoon extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 로그인 여부에 따른 화면 이동. null이면 그대로.
+String? loginRedirect({required bool canEnter, required String at}) {
+  final atLogin = at == AppRoutes.login;
+  if (!canEnter) return atLogin ? null : AppRoutes.login;
+  return atLogin ? AppRoutes.lobby : null;
 }

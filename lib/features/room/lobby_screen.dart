@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/user_profile.dart';
+import '../../core/auth/account_sheet.dart';
 import '../../core/models/room.dart';
 import '../../core/models/subject.dart';
 import '../../core/router.dart';
@@ -132,19 +133,27 @@ class _ProfileState extends ConsumerState<_Profile> {
       children: [
         Row(
           children: [
-            Container(
-              width: _avatar,
-              height: _avatar,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.lime,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.ink,
-                  width: AppBlock.border,
+            // 누르면 내 계정 (Google 로그인·로그아웃)
+            Semantics(
+              button: true,
+              label: '내 계정',
+              child: GestureDetector(
+                onTap: () => showAccountSheet(context),
+                child: Container(
+                  width: _avatar,
+                  height: _avatar,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.lime,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.ink,
+                      width: AppBlock.border,
+                    ),
+                  ),
+                  child: Text(initial, style: AppTextStyles.heading),
                 ),
               ),
-              child: Text(initial, style: AppTextStyles.heading),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
