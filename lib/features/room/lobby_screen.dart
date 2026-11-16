@@ -26,6 +26,9 @@ import 'progress_repository.dart';
 import 'progress_rules.dart';
 import 'room_providers.dart';
 import 'room_repository.dart';
+import 'room_sheets.dart';
+import '../battle/waiting_room_screen.dart';
+import '../bank/upload_cards_sheet.dart';
 
 final _bankCountProvider = StreamProvider.autoDispose.family<int, String>(
   (ref, roomId) => ref
@@ -59,6 +62,8 @@ class LobbyScreen extends ConsumerWidget {
           children: [
             _Profile(nickname: nickname),
             const SizedBox(height: AppSpacing.section + AppSpacing.sm),
+            // 처음 쓰는 사람: 배틀까지 남은 단계 (다 하면 사라짐)
+            _StartGuide(room: room),
             _BossCard(boss: nextExam(subjects)),
             const SizedBox(height: AppSpacing.section),
             ChunkyButton(
@@ -77,6 +82,16 @@ class LobbyScreen extends ConsumerWidget {
                 const Expanded(child: _MockCard()),
               ],
             ),
+            if (room != null) ...[
+              const SizedBox(height: AppSpacing.section),
+              ChunkyButton(
+                label: '친구랑 배틀하기',
+                icon: Icons.bolt_rounded,
+                color: AppColors.ink,
+                shadowColor: AppColors.pink,
+                onPressed: () => openBattle(context, room),
+              ),
+            ],
             const SizedBox(height: AppSpacing.section),
             const _Quests(),
           ],
@@ -572,4 +587,101 @@ List<String> memberNamesOf(Room room) {
     for (final uid in ids)
       room.nicknameOf(uid).isEmpty ? '친구' : room.nicknameOf(uid),
   ];
+}
+
+/// 대기실 열기 (로비·시작 안내에서)
+void openBattle(BuildContext context, Room room) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(builder: (_) => WaitingRoomScreen(roomId: room.id)),
+  );
+}
+
+/// 시작 안내의 한 단계
+typedef StartStep = ({String title, bool done});
+
+/// 배틀까지 단계: 방 → 문제 올리기 → 친구 초대. 다 끝났으면 빈 목록.
+List<StartStep> startSteps({required Room? room, required int bankCount}) {
+  final steps = <StartStep>[
+    (title: '스터디 방 만들기 (또는 코드로 입장)', done: room != null),
+    (title: '내 카드 문제은행에 올리기', done: bankCount > 0),
+    (title: '친구 초대하기', done: (room?.memberIds.length ?? 0) >= 2),
+  ];
+  return steps.every((s) => s.done) ? const [] : steps;
+}
+
+/// 로비 맨 위 "배틀까지 3단계" 안내. 다음에 할 단계에만 버튼이 붙는다.
+class _StartGuide extends ConsumerWidget {
+  const _StartGuide({required this.room});
+  final Room? room;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final room = this.room;
+    final count = room == null
+        ? 0
+        : ref.watch(_bankCountProvider(room.id)).value;
+    if (count == null) return const SizedBox.shrink(); // 불러오는 중
+    final steps = startSteps(room: room, bankCount: count);
+    if (steps.isEmpty) return const SizedBox.shrink();
+    final next = steps.indexWhere((s) => !s.done);
+
+    Widget action() => switch (next) {
+      0 => const RoomActions(),
+      1 => ChunkyButton(
+        label: '내 카드 올리기',
+        icon: Icons.upload_rounded,
+        color: AppColors.lime,
+        onPressed: () => showUploadMyCardsSheet(context, room!),
+      ),
+      _ => ChunkyButton(
+        label: '초대 코드 보내기',
+        icon: Icons.person_add_alt_1_rounded,
+        color: AppColors.lime,
+        onPressed: () => showInviteCodeSheet(context, room!),
+      ),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.section),
+      child: ChunkyCard(
+        color: AppColors.paper,
+        shadowColor: AppColors.ink,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('친구랑 배틀까지 3단계', style: AppTextStyles.heading),
+            const SizedBox(height: AppSpacing.sm),
+            for (final (i, s) in steps.indexed)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: Row(
+                  children: [
+                    Icon(
+                      s.done
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      color: s.done ? AppColors.grape : AppColors.inkSub,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        '${i + 1}. ${s.title}',
+                        style: AppTextStyles.bodyS.copyWith(
+                          fontWeight: i == next ? FontWeight.w900 : null,
+                          decoration: s.done
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: AppSpacing.sm),
+            action(),
+          ],
+        ),
+      ),
+    );
+  }
 }

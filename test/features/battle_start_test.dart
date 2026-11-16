@@ -36,11 +36,9 @@ void main() {
     expect(startBlocker(room, 'host', bankCount: 5), contains('친구'));
   });
 
-  test('준비 안 한 사람이 있으면 그 사람 이름을 알려 준다', () {
-    final room = _room(
-      players: {'host': _host, 'a': _readyFriend, 'b': _notReady},
-    );
-    expect(startBlocker(room, 'host', bankCount: 5), contains('민지'));
+  test('준비 단계 없음: 대기실에 들어온 친구가 있으면 바로 시작 가능', () {
+    final room = _room(players: {'host': _host, 'b': _notReady});
+    expect(startBlocker(room, 'host', bankCount: 5), isNull);
   });
 
   test('문제은행이 비면 시작 못 함', () {

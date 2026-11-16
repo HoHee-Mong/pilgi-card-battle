@@ -67,17 +67,15 @@ class BattleException implements Exception {
 }
 
 /// 방장이 지금 시작할 수 있는지. 시작할 수 있으면 null, 아니면 이유 문구.
+/// 대기실에 들어온 사람은 바로 참가한다 (따로 "준비" 단계 없음).
 ///
 /// [bankCount]는 지금 범위에서 뽑을 수 있는 문제 수.
 String? startBlocker(Room room, String uid, {required int bankCount}) {
   if (!room.isHost(uid)) return '방장만 시작할 수 있어요';
   if (room.status != RoomStatus.waiting) return '이미 배틀 중이에요';
-  if (room.players.length < kBattleMinPlayers) return '친구가 들어오면 시작할 수 있어요';
-  final notReady = [
-    for (final e in room.players.entries)
-      if (e.key != room.hostId && !e.value.ready) e.value.nickname,
-  ];
-  if (notReady.isNotEmpty) return '${notReady.join(', ')} 님이 아직 준비 중이에요';
+  if (room.players.length < kBattleMinPlayers) {
+    return '친구가 이 화면에 들어오면 시작할 수 있어요';
+  }
   if (bankCount == 0) return '이 범위에 문제은행 문제가 없어요';
   return null;
 }
