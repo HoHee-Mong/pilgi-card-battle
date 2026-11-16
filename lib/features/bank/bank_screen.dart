@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:firebase_auth/firebase_auth.dart';
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +22,7 @@ import '../battle/waiting_room_screen.dart';
 import '../room/room_repository.dart';
 import '../room/room_sheets.dart';
 import '../room/room_stats_screen.dart';
+import 'bank_filter.dart';
 import 'bank_repository.dart';
 import 'upload_cards_sheet.dart';
 
@@ -27,9 +31,8 @@ final _roomProvider = StreamProvider.autoDispose.family<Room?, String>(
 );
 
 final _bankProvider = StreamProvider.autoDispose
-    .family<List<BankEntry>, (String, BankSort)>(
-      (ref, args) =>
-          ref.watch(bankRepositoryProvider).watchBank(args.$1, sort: args.$2),
+    .family<List<BankEntry>, String>(
+      (ref, roomId) => ref.watch(bankRepositoryProvider).watchBank(roomId),
     );
 
 /// cardId 목록(쉼표로 이은 문자열) → 카드 본문. 목록이 같으면 다시 읽지 않는다.
@@ -55,11 +58,35 @@ class BankScreen extends ConsumerStatefulWidget {
 
 class _BankScreenState extends ConsumerState<BankScreen> {
   BankSort _sort = BankSort.votes;
+  BankFilter _filter = BankFilter.none;
+  final _search = TextEditingController();
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _search.dispose();
+    super.dispose();
+  }
+
+  /// 글자 칠 때마다 다시 그리지 않고 잠깐 멈추면 적용
+  void _onQuery(String text) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) setState(() => _filter = _filter.copyWith(query: text));
+    });
+  }
+
+  void _resetFilter() {
+    _debounce?.cancel();
+    _search.clear();
+    setState(() => _filter = BankFilter.none);
+  }
 
   @override
   Widget build(BuildContext context) {
     final room = ref.watch(_roomProvider(widget.roomId)).value;
-    final bank = ref.watch(_bankProvider((widget.roomId, _sort)));
+    final bank = ref.watch(_bankProvider(widget.roomId));
     final canPop = Navigator.of(context).canPop();
 
     return Scaffold(
@@ -123,7 +150,10 @@ class _BankScreenState extends ConsumerState<BankScreen> {
                   ? const [
                       _Message('아직 올라온 문제가 없어요.\n위의 "내 카드 한꺼번에 올리기"를 눌러 보세요.'),
                     ]
-                  : _entryList(entries, room),
+                  : _entryList(
+                      BankRepository.sortEntries(entries, _sort),
+                      room,
+                    ),
             ),
           ],
         ),
@@ -131,11 +161,17 @@ class _BankScreenState extends ConsumerState<BankScreen> {
     );
   }
 
-  List<Widget> _entryList(List<BankEntry> entries, Room? room) {
-    final ids = entries.map((e) => e.cardId).toList()..sort();
+  List<Widget> _entryList(List<BankEntry> all, Room? room) {
+    // 카드 본문은 전체 목록 기준으로 한 번만 읽는다 (검색·필터를 바꿔도 다시 안 읽음)
+    final ids = all.map((e) => e.cardId).toList()..sort();
     final cards = ref.watch(_cardsProvider(ids.join(','))).value ?? const {};
     final myUid = FirebaseAuth.instance.currentUser?.uid;
     final ranked = _sort == BankSort.votes;
+    final filtering = _filter.isActive;
+    final entries = filterBank(all, cards, _filter);
+    // 필터를 걸어도 순위 숫자는 전체 순위 그대로
+    final rankOf = {for (final (i, e) in all.indexed) e.cardId: i};
+    final weeks = {for (final e in all) e.week}.toList()..sort();
 
     Widget tile(int i, BankEntry entry) {
       final card = cards[entry.cardId];
@@ -149,8 +185,9 @@ class _BankScreenState extends ConsumerState<BankScreen> {
               BankRepository.canRemove(entry, room, myUid)
           ? () => _confirmRemove(room, entry, card, myUid)
           : null;
+      final rank = rankOf[entry.cardId] ?? i;
       // 투표순 1위는 표가 하나 이상 있을 때만 크게 보여 준다.
-      if (ranked && i == 0 && entry.voteCount > 0) {
+      if (ranked && rank == 0 && entry.voteCount > 0) {
         return _TopTile(
           roomId: widget.roomId,
           entry: entry,
@@ -164,14 +201,47 @@ class _BankScreenState extends ConsumerState<BankScreen> {
         roomId: widget.roomId,
         entry: entry,
         card: card,
-        badge: ranked ? '${i + 1}' : '${entry.week}주',
-        badgeColor: ranked ? _rankColor(i) : AppColors.cream,
+        badge: ranked ? '${rank + 1}' : '${entry.week}주',
+        badgeColor: ranked ? _rankColor(rank) : AppColors.cream,
       );
     }
 
     return [
+      _SearchBar(
+        controller: _search,
+        filter: _filter,
+        weeks: weeks,
+        onQuery: _onQuery,
+        onFilter: (f) {
+          Haptics.selection();
+          setState(() => _filter = f);
+        },
+      ),
+      const SizedBox(height: AppSpacing.md),
+      if (filtering)
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '찾은 문제 ${entries.length}개 / 전체 ${all.length}개',
+                  style: AppTextStyles.label,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _resetFilter,
+                icon: const Icon(Icons.restart_alt_rounded),
+                label: const Text('필터 초기화'),
+              ),
+            ],
+          ),
+        ),
+      if (entries.isEmpty) const _Message('조건에 맞는 문제가 없어요.\n검색어나 필터를 바꿔 보세요.'),
       for (final (i, entry) in entries.indexed)
         Padding(
+          // 목록이 바뀌어도 같은 카드는 같은 자리로 (등장 모션이 다시 안 돌게)
+          key: ValueKey('row-${entry.cardId}'),
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: tile(i, entry)
               .animate(key: ValueKey('${_sort.name}-${entry.cardId}'))
@@ -364,6 +434,109 @@ String _sourceText(BankEntry entry, QuizCard? card) {
   final base = '${entry.week}주차 · $who 카드';
   if (card == null || card.sourceLabel.isEmpty) return base;
   return '$base · ${card.sourceLabel}';
+}
+
+/// 검색창 + 주차·유형 필터 칩
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({
+    required this.controller,
+    required this.filter,
+    required this.weeks,
+    required this.onQuery,
+    required this.onFilter,
+  });
+
+  final TextEditingController controller;
+  final BankFilter filter;
+
+  /// 문제은행에 있는 주차들
+  final List<int> weeks;
+  final ValueChanged<String> onQuery;
+  final ValueChanged<BankFilter> onFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: controller,
+          onChanged: onQuery,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            hintText: '문제·보기·정답으로 찾기',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: ListenableBuilder(
+              listenable: controller,
+              builder: (_, _) => controller.text.isEmpty
+                  ? const SizedBox.shrink()
+                  : IconButton(
+                      tooltip: '검색어 지우기',
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () {
+                        controller.clear();
+                        onQuery('');
+                      },
+                    ),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
+          children: [
+            for (final t in CardType.values)
+              _FilterChip(
+                label: cardTypeLabels[t]!,
+                selected: filter.types.contains(t),
+                onTap: () => onFilter(filter.toggleType(t)),
+              ),
+            if (weeks.length > 1)
+              for (final w in weeks)
+                _FilterChip(
+                  label: '$w주',
+                  selected: filter.weeks.contains(w),
+                  onTap: () => onFilter(filter.toggleWeek(w)),
+                ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? AppColors.lime : AppColors.paper;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: ChunkyPress(
+        onTap: onTap,
+        color: color,
+        radius: AppRadius.chip,
+        height: AppSpacing.minTouch,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: Text(
+          label,
+          style: AppTextStyles.chip.copyWith(color: onChunkyColor(color)),
+        ),
+      ),
+    );
+  }
 }
 
 /// 투표순 1위: 분홍 큰 카드 + 위에 살랑이는 왕관
