@@ -40,12 +40,22 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
   late final BattleRepository _battle = ref.read(battleRepositoryProvider);
   String? _uid;
   bool _starting = false;
+  late final AppLifecycleListener _lifecycle;
   String? _error;
 
   @override
   void initState() {
     super.initState();
     _enter();
+    // 앱을 아예 닫으면 대기실·배틀에서 뺀다 (내렸다 돌아오는 건 그대로 둠).
+    _lifecycle = AppLifecycleListener(onDetach: _leave);
+  }
+
+  void _leave() {
+    final uid = _uid;
+    if (uid == null) return;
+    _uid = null;
+    _battle.leave(roomId: widget.roomId, uid: uid).ignore();
   }
 
   Future<void> _enter() async {
@@ -64,11 +74,9 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
 
   @override
   void dispose() {
-    final uid = _uid;
+    _lifecycle.dispose();
     // 화면을 떠나면 대기실에서 뺀다 (기다리지 않음).
-    if (uid != null) {
-      _battle.leave(roomId: widget.roomId, uid: uid).ignore();
-    }
+    _leave();
     super.dispose();
   }
 

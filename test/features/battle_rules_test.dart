@@ -93,4 +93,19 @@ void main() {
       );
     });
   });
+
+  group('다시 들어왔을 때 라운드 시작 시각', () {
+    final now = DateTime(2026, 11, 16, 12, 0, 30);
+
+    test('서버 시각이 최근이면 그걸 쓴다 (다른 사람과 타이머 맞춤)', () {
+      final server = now.subtract(const Duration(seconds: 8));
+      expect(roundStartFor(server, now), server);
+    });
+
+    test('서버 시각이 없거나 미래거나 너무 오래전이면 지금', () {
+      expect(roundStartFor(null, now), now);
+      expect(roundStartFor(now.add(const Duration(seconds: 2)), now), now);
+      expect(roundStartFor(now.subtract(const Duration(minutes: 5)), now), now);
+    });
+  });
 }
