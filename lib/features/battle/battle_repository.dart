@@ -85,6 +85,41 @@ String? startBlocker(Room room, String uid, {required int bankCount}) {
 bool keepsPlayerOnEnter(Room room, String uid) =>
     room.status != RoomStatus.waiting && room.players.containsKey(uid);
 
+/// 재대결을 시작할 수 있는지: 끝난 판이고, 대기실(결과 화면)에 2명 이상 있고, 모두 "다시 대결하기"를 눌렀다.
+bool rematchReady(Room room) =>
+    room.status == RoomStatus.finished &&
+    room.players.length >= kBattleMinPlayers &&
+    room.players.keys.every(room.rematchVotes.contains);
+
+/// 재대결 화면 상태 (결과 화면 아래 영역)
+enum RematchState {
+  /// 아무도 안 누름
+  none,
+
+  /// 내가 눌렀고 상대를 기다림
+  waiting,
+
+  /// 상대가 눌렀고 내 대답을 기다림
+  invited,
+
+  /// 모두 눌러서 곧 시작
+  starting,
+
+  /// 상대가 나가서 할 수 없음
+  alone,
+}
+
+RematchState rematchStateFor(Room room, String uid) {
+  if (room.players.length < kBattleMinPlayers) return RematchState.alone;
+  if (rematchReady(room)) return RematchState.starting;
+  final mine = room.rematchVotes.contains(uid);
+  final others = room.rematchVotes.any(
+    (v) => v != uid && room.players.containsKey(v),
+  );
+  if (mine) return RematchState.waiting;
+  return others ? RematchState.invited : RematchState.none;
+}
+
 /// 대기실·배틀 진행 (`rooms/{roomId}`의 status·players·cardIds·round).
 ///
 /// `players`는 지금 대기실·배틀에 있는 사람, `memberIds`는 들어온 적 있는 사람이다.
@@ -167,18 +202,59 @@ class BattleRepository {
     required String roomId,
     required String uid,
     required BankRepository bank,
+  }) => _begin(roomId: roomId, uid: uid, bank: bank, rematch: false);
+
+  /// 재대결 시작: 모두 "다시 대결하기"를 눌렀을 때 방장 기기가 부른다.
+  /// 같은 설정(문항 수·범위)으로 새 판. 이미 시작됐으면 아무것도 안 한다.
+  Future<void> startRematch({
+    required String roomId,
+    required String uid,
+    required BankRepository bank,
+  }) => _begin(roomId: roomId, uid: uid, bank: bank, rematch: true);
+
+  /// 끝난 판에서 "다시 대결하기" (여러 번 눌러도 한 번)
+  Future<void> requestRematch({required String roomId, required String uid}) {
+    return _room(roomId).update({
+      'rematchVotes': FieldValue.arrayUnion([uid]),
+    });
+  }
+
+  /// 재대결 요청 취소
+  Future<void> cancelRematch({required String roomId, required String uid}) {
+    return _room(roomId).update({
+      'rematchVotes': FieldValue.arrayRemove([uid]),
+    });
+  }
+
+  static String? _rematchBlocker(Room room, String uid, int bankCount) {
+    if (room.status != RoomStatus.finished) return '이미 새 판이 시작됐어요';
+    if (!room.isHost(uid)) return '방장 기기가 시작해요';
+    if (!rematchReady(room)) return '아직 모두 수락하지 않았어요';
+    if (bankCount == 0) return '이 범위에 문제은행 문제가 없어요';
+    return null;
+  }
+
+  Future<void> _begin({
+    required String roomId,
+    required String uid,
+    required BankRepository bank,
+    required bool rematch,
   }) async {
     final roomRef = _room(roomId);
     final before = await roomRef.get();
     final data = before.data();
     if (data == null) throw const BattleException('방이 없어졌어요.');
     final room = Room.fromMap(before.id, data);
+    String? check(Room r, int count) => rematch
+        ? _rematchBlocker(r, uid, count)
+        : startBlocker(r, uid, bankCount: count);
+    if (rematch && room.status != RoomStatus.finished) return; // 이미 시작됨
     final picked = await bank.topVoted(
       roomId,
       weeks: room.weeks,
       limit: room.questionCount,
     );
-    final blocker = startBlocker(room, uid, bankCount: picked.length);
+    final blocker = check(room, picked.length);
     if (blocker != null) throw BattleException(blocker);
     // 지난 판 답이 남아 있으면 같은 문서 id(round_uid)라 새 답이 막힌다 → 먼저 비운다.
     await _clearAnswers(roomId);
@@ -187,13 +263,17 @@ class BattleRepository {
       final snap = await tx.get(roomRef);
       final now = Room.fromMap(snap.id, snap.data() ?? const {});
       // 가져온 사이에 누가 나가거나 준비를 풀었으면 다시 확인한다.
-      final again = startBlocker(now, uid, bankCount: picked.length);
+      final again = check(now, picked.length);
       if (again != null) throw BattleException(again);
       tx.update(roomRef, {
         'status': RoomStatus.playing.name,
         'cardIds': [for (final e in picked) e.cardId],
         'round': 0,
         'roundStartedAt': FieldValue.serverTimestamp(),
+        // 판마다 새 ID (배틀 기록은 이 ID로 한 번만 저장된다)
+        'battleId': roomRef.collection('answers').doc().id,
+        'rematchVotes': <String>[],
+        for (final p in now.players.keys) 'players.$p.ready': false,
         for (final p in now.players.keys) ...{
           'players.$p.score': 0,
           'players.$p.combo': 0,
@@ -361,6 +441,7 @@ class BattleRepository {
         'cardIds': <String>[],
         'round': 0,
         'roundStartedAt': null,
+        'rematchVotes': <String>[],
         for (final p in room.players.keys) 'players.$p.ready': false,
       });
     });

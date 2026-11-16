@@ -19,6 +19,7 @@ import '../../fx/confetti.dart';
 import '../../fx/sound.dart';
 import '../room/progress_repository.dart';
 import '../room/progress_rules.dart';
+import '../bank/bank_repository.dart';
 import 'battle_repository.dart';
 
 final _myAnswersProvider = StreamProvider.autoDispose
@@ -281,19 +282,16 @@ class _BattleResultState extends ConsumerState<BattleResult> {
               ),
             ),
             const SizedBox(height: AppSpacing.section),
-            if (room.isHost(widget.myUid))
-              ChunkyButton(
-                label: '한 판 더',
-                color: AppColors.pink,
-                onPressed: widget.onBackToWaiting,
-              )
-            else
-              Text(
-                '방장이 한 판 더 하면 대기실로 돌아가요',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.label.copyWith(color: AppColors.ink),
-              ),
+            _Rematch(room: room, myUid: widget.myUid),
             const SizedBox(height: AppSpacing.sm),
+            if (room.isHost(widget.myUid)) ...[
+              ChunkyButton(
+                label: '설정 바꾸러 대기실로',
+                color: AppColors.cream,
+                onPressed: widget.onBackToWaiting,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             ChunkyButton(
               label: '나가기',
               color: AppColors.paper,
@@ -386,6 +384,159 @@ class _QuestionRow extends StatelessWidget {
           VoteButton(roomId: roomId, cardId: cardId, compact: true),
         ],
       ),
+    );
+  }
+}
+
+/// "다시 대결하기": 누르면 상대에게 요청이 보이고, 모두 누르면 방장 기기가 새 판을 시작한다.
+/// 같은 방·같은 설정, 점수·콤보·타이머는 새로. 지난 판 기록·XP는 이미 저장돼 다시 저장되지 않는다.
+class _Rematch extends ConsumerStatefulWidget {
+  const _Rematch({required this.room, required this.myUid});
+
+  final Room room;
+  final String myUid;
+
+  @override
+  ConsumerState<_Rematch> createState() => _RematchState();
+}
+
+class _RematchState extends ConsumerState<_Rematch> {
+  bool _busy = false;
+
+  /// 이 판에서 시작을 이미 부탁했는지 (방장 기기만, 중복 방지)
+  bool _startAsked = false;
+  String? _error;
+
+  @override
+  void didUpdateWidget(_Rematch old) {
+    super.didUpdateWidget(old);
+    _maybeStart();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeStart());
+  }
+
+  /// 모두 수락했으면 방장 기기가 새 판을 시작한다 (한 번만)
+  void _maybeStart() {
+    final room = widget.room;
+    if (_startAsked || !room.isHost(widget.myUid) || !rematchReady(room)) {
+      return;
+    }
+    _startAsked = true;
+    ref
+        .read(battleRepositoryProvider)
+        .startRematch(
+          roomId: room.id,
+          uid: widget.myUid,
+          bank: ref.read(bankRepositoryProvider),
+        )
+        .catchError((Object e) {
+          if (!mounted) return;
+          setState(() {
+            _startAsked = false;
+            _error = e is BattleException ? e.message : '새 판을 시작하지 못했어요.';
+          });
+        });
+  }
+
+  Future<void> _run(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await action();
+    } catch (_) {
+      if (mounted) setState(() => _error = '연결이 불안정해요. 다시 눌러 주세요.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final room = widget.room;
+    final repo = ref.read(battleRepositoryProvider);
+    final state = rematchStateFor(room, widget.myUid);
+    final asker = room.rematchVotes
+        .where((v) => v != widget.myUid && room.players.containsKey(v))
+        .map(room.nicknameOf)
+        .firstOrNull;
+
+    final Widget body = switch (state) {
+      RematchState.alone => Text(
+        '상대가 나가서 다시 대결할 수 없어요',
+        textAlign: TextAlign.center,
+        style: AppTextStyles.label.copyWith(color: AppColors.ink),
+      ),
+      RematchState.starting => Text(
+        '모두 수락! 곧 새 판이 시작돼요',
+        textAlign: TextAlign.center,
+        style: AppTextStyles.heading.copyWith(color: AppColors.ink),
+      ),
+      RematchState.waiting => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '상대가 수락하길 기다리는 중… '
+            '(${room.players.keys.where(room.rematchVotes.contains).length}'
+            '/${room.players.length})',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.label.copyWith(color: AppColors.ink),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          ChunkyButton(
+            label: '요청 취소',
+            color: AppColors.paper,
+            loading: _busy,
+            onPressed: () => _run(
+              () => repo.cancelRematch(roomId: room.id, uid: widget.myUid),
+            ),
+          ),
+        ],
+      ),
+      RematchState.invited || RematchState.none => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (state == RematchState.invited)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: Text(
+                '${asker == null || asker.isEmpty ? '친구' : asker} 님이 다시 대결하재요!',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.heading.copyWith(color: AppColors.ink),
+              ),
+            ),
+          ChunkyButton(
+            label: state == RematchState.invited ? '수락하고 다시 대결' : '다시 대결하기',
+            icon: Icons.replay_rounded,
+            color: AppColors.pink,
+            loading: _busy,
+            onPressed: () => _run(
+              () => repo.requestRematch(roomId: room.id, uid: widget.myUid),
+            ),
+          ),
+        ],
+      ),
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        body,
+        if (_error != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            _error!,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.label.copyWith(color: AppColors.grape),
+          ),
+        ],
+      ],
     );
   }
 }
