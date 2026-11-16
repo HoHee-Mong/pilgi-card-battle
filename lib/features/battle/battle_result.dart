@@ -12,6 +12,7 @@ import '../../core/widgets/outlined_text.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../../core/widgets/vote_button.dart';
 import '../../core/widgets/rank_stamp.dart';
+import '../../fx/confetti.dart';
 import '../../fx/sound.dart';
 import '../room/progress_repository.dart';
 import '../room/progress_rules.dart';
@@ -137,136 +138,147 @@ class _BattleResultState extends ConsumerState<BattleResult> {
     final answerByRound = {for (final a in answers) a.round: a};
     final wrongCount = total - summary.correct;
 
-    return ListView(
-      padding: AppLayout.pagePadding(
-        context,
-        top: AppSpacing.section,
-        bottom: AppSpacing.section * 2,
-      ),
+    // 결과: 랭크 도장 + 뒤 별 회전 + 색종이 낙하 (DESIGN.md)
+    return Stack(
       children: [
-        Center(child: RankStamp(rank: resultRank(summary.percent))),
-        Center(
-          child:
-              OutlinedText(
-                myRank == 1 ? '우승!' : '$myRank위',
-                color: myRank == 1 ? AppColors.pink : AppColors.paper,
-              ).animate().scaleXY(
-                begin: 2,
-                end: 1,
-                duration: AppMotion.stamp,
-                curve: AppMotion.spring,
-              ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          '${room.name} 배틀 $total문제 · 정답률 ${summary.percent}%',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.label.copyWith(color: AppColors.ink),
-        ),
-        const SizedBox(height: AppSpacing.section),
-        Row(
+        ListView(
+          padding: AppLayout.pagePadding(
+            context,
+            top: AppSpacing.section,
+            bottom: AppSpacing.section * 2,
+          ),
           children: [
-            Expanded(
-              child: _StatTile(
-                value: '${summary.correct}/$total',
-                label: '맞힌 문제',
-                color: AppColors.paper,
+            Center(child: RankStamp(rank: resultRank(summary.percent))),
+            Center(
+              child:
+                  OutlinedText(
+                    myRank == 1 ? '우승!' : '$myRank위',
+                    color: myRank == 1 ? AppColors.pink : AppColors.paper,
+                  ).animate().scaleXY(
+                    begin: 2,
+                    end: 1,
+                    duration: AppMotion.stamp,
+                    curve: AppMotion.spring,
+                  ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              '${room.name} 배틀 $total문제 · 정답률 ${summary.percent}%',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.label.copyWith(color: AppColors.ink),
+            ),
+            const SizedBox(height: AppSpacing.section),
+            Row(
+              children: [
+                Expanded(
+                  child: _StatTile(
+                    value: '${summary.correct}/$total',
+                    label: '맞힌 문제',
+                    color: AppColors.paper,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _StatTile(
+                    value: 'x${summary.bestCombo}',
+                    label: '최고 콤보',
+                    color: AppColors.lime,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _StatTile(
+                    value: _gainedXp == null ? '…' : '+$_gainedXp',
+                    label: '획득 XP',
+                    color: AppColors.cyan,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.section),
+            ChunkyCard(
+              title: '순위',
+              child: Column(
+                children: [
+                  for (final (i, e) in ranked.indexed)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: AppSpacing.minTouch,
+                            child: Text('${i + 1}위', style: AppTextStyles.chip),
+                          ),
+                          Expanded(
+                            child: Text(
+                              e.key == widget.myUid
+                                  ? '${e.value.nickname} (나)'
+                                  : e.value.nickname,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.body.copyWith(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          Text('${e.value.score}점', style: AppTextStyles.chip),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _StatTile(
-                value: 'x${summary.bestCombo}',
-                label: '최고 콤보',
-                color: AppColors.lime,
+            const SizedBox(height: AppSpacing.section),
+            ChunkyCard(
+              title: '문제별 결과',
+              trailing: wrongCount == 0
+                  ? null
+                  : Text(
+                      '오답 노트에 저장',
+                      style: AppTextStyles.label.copyWith(
+                        color: AppColors.grape,
+                      ),
+                    ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final (r, id) in room.cardIds.indexed)
+                    _QuestionRow(
+                      roomId: room.id,
+                      cardId: id,
+                      card: cardsById[id],
+                      correct: answerByRound[r]?.correct ?? false,
+                    ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    '시험에 나올 것 같은 문제엔 별을 눌러 주세요',
+                    style: AppTextStyles.caption,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _StatTile(
-                value: _gainedXp == null ? '…' : '+$_gainedXp',
-                label: '획득 XP',
-                color: AppColors.cyan,
+            const SizedBox(height: AppSpacing.section),
+            if (room.isHost(widget.myUid))
+              ChunkyButton(
+                label: '한 판 더',
+                color: AppColors.pink,
+                onPressed: widget.onBackToWaiting,
+              )
+            else
+              Text(
+                '방장이 한 판 더 하면 대기실로 돌아가요',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.label.copyWith(color: AppColors.ink),
               ),
+            const SizedBox(height: AppSpacing.sm),
+            ChunkyButton(
+              label: '나가기',
+              color: AppColors.paper,
+              onPressed: () => Navigator.of(context).maybePop(),
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.section),
-        ChunkyCard(
-          title: '순위',
-          child: Column(
-            children: [
-              for (final (i, e) in ranked.indexed)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: AppSpacing.minTouch,
-                        child: Text('${i + 1}위', style: AppTextStyles.chip),
-                      ),
-                      Expanded(
-                        child: Text(
-                          e.key == widget.myUid
-                              ? '${e.value.nickname} (나)'
-                              : e.value.nickname,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.body.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      Text('${e.value.score}점', style: AppTextStyles.chip),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.section),
-        ChunkyCard(
-          title: '문제별 결과',
-          trailing: wrongCount == 0
-              ? null
-              : Text(
-                  '오답 노트에 저장',
-                  style: AppTextStyles.label.copyWith(color: AppColors.grape),
-                ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final (r, id) in room.cardIds.indexed)
-                _QuestionRow(
-                  roomId: room.id,
-                  cardId: id,
-                  card: cardsById[id],
-                  correct: answerByRound[r]?.correct ?? false,
-                ),
-              const SizedBox(height: AppSpacing.xs),
-              Text('시험에 나올 것 같은 문제엔 별을 눌러 주세요', style: AppTextStyles.caption),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.section),
-        if (room.isHost(widget.myUid))
-          ChunkyButton(
-            label: '한 판 더',
-            color: AppColors.pink,
-            onPressed: widget.onBackToWaiting,
-          )
-        else
-          Text(
-            '방장이 한 판 더 하면 대기실로 돌아가요',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.label.copyWith(color: AppColors.ink),
-          ),
-        const SizedBox(height: AppSpacing.sm),
-        ChunkyButton(
-          label: '나가기',
-          color: AppColors.paper,
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+        const Positioned.fill(child: ConfettiRain()),
       ],
     );
   }
