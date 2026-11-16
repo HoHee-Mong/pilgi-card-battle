@@ -1,6 +1,6 @@
 # 데이터 구조와 공용 모델 (A·B 공통 계약)
 
-Firebase: Auth(익명 로그인 + 닉네임), Firestore, AI Logic(`firebase_ai`, Gemini). **Storage는 쓰지 않는다**(Blaze 요금제 필요) — 자료 파일은 기기에서 바로 Gemini로 보내고 원본은 저장하지 않는다.
+Firebase: Auth(Google 로그인 또는 게스트=익명 + 닉네임. 게스트가 Google로 로그인하면 같은 uid에 연결되어 기록 유지), Firestore, AI Logic(`firebase_ai`, Gemini). **Storage는 쓰지 않는다**(Blaze 요금제 필요) — 자료 파일은 기기에서 바로 Gemini로 보내고 원본은 저장하지 않는다.
 
 규칙: 필드는 **추가만** 한다. 삭제·이름 변경은 두 사람이 합의한 뒤 이 문서와 모델을 같이 고친다.
 

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'auth_providers.dart';
@@ -29,6 +30,26 @@ class UserProfileRepository {
     }, SetOptions(merge: true));
     return nickname;
   }
+
+  /// Google 로그인 때: 닉네임이 없거나 자동으로 만든 "학생1234"면 Google 이름으로 바꾼다.
+  /// 직접 정한 닉네임은 그대로 둔다.
+  Future<void> adoptName(String uid, String? displayName) async {
+    final name = (displayName ?? '').trim();
+    if (name.isEmpty) return;
+    final snap = await _doc(uid).get();
+    final existing = snap.data()?['nickname'] as String? ?? '';
+    if (existing.isNotEmpty && !isAutoNickname(existing)) return;
+    await _doc(uid).set({
+      'nickname': name.characters.take(maxNicknameLength).toString(),
+      if (!snap.exists) 'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  static const maxNicknameLength = 12;
+
+  /// [ensureNickname]이 자동으로 만든 닉네임인지
+  static bool isAutoNickname(String nickname) =>
+      RegExp(r'^학생\d{4}$').hasMatch(nickname);
 
   Future<void> setNickname(String uid, String nickname) {
     return _doc(uid)
