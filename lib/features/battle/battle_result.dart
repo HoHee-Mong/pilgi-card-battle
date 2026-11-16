@@ -10,6 +10,7 @@ import '../../core/widgets/chunky_card.dart';
 import '../../core/widgets/outlined_text.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../../core/widgets/vote_button.dart';
+import '../../fx/sound.dart';
 import 'battle_repository.dart';
 
 final _myAnswersProvider = StreamProvider.autoDispose
@@ -76,6 +77,16 @@ class BattleResult extends ConsumerStatefulWidget {
 
 class _BattleResultState extends ConsumerState<BattleResult> {
   bool _saved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final ranked = widget.room.players.entries.toList()
+      ..sort((a, b) => b.value.score.compareTo(a.value.score));
+    if (ranked.isNotEmpty && ranked.first.key == widget.myUid) {
+      Sound.play(Sfx.bossDown);
+    }
+  }
 
   void _saveOnce(List<BattleAnswer> answers) {
     if (_saved || answers.isEmpty || widget.cards.isEmpty) return;

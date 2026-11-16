@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router.dart';
+import 'fx/sound.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 
@@ -11,6 +12,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await _ensureSignedIn();
+  await Sound.init();
   runApp(const ProviderScope(child: PilgiApp()));
 }
 

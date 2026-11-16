@@ -13,6 +13,7 @@ import '../../core/widgets/boss_sprite.dart';
 import '../../core/widgets/chunky_card.dart';
 import '../../core/widgets/outlined_text.dart';
 import '../../core/widgets/stat_chip.dart';
+import '../../fx/sound.dart';
 import '../bank/bank_repository.dart';
 import '../subjects/subject_providers.dart';
 import '../subjects/subject_utils.dart';
@@ -130,7 +131,29 @@ class _Profile extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(width: AppSpacing.sm),
+        const _SoundToggle(),
       ],
+    );
+  }
+}
+
+/// 효과음 켜기/끄기 (설정은 기기에 저장)
+class _SoundToggle extends ConsumerWidget {
+  const _SoundToggle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final on = ref.watch(soundOnProvider);
+    return ChunkyButton(
+      expand: false,
+      color: on ? AppColors.sun : AppColors.paper,
+      semanticLabel: on ? '효과음 끄기' : '효과음 켜기',
+      onPressed: () async {
+        await ref.read(soundOnProvider.notifier).toggle();
+        if (!on) Sound.play(Sfx.vote); // 켰을 때 들려주기
+      },
+      child: Icon(on ? Icons.volume_up_rounded : Icons.volume_off_rounded),
     );
   }
 }

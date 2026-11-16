@@ -59,7 +59,8 @@ class _ChunkyPressState extends State<ChunkyPress> {
 
     final box = AnimatedContainer(
       duration: AppMotion.press,
-      curve: Curves.easeOut,
+      // 누를 땐 빠르게, 뗄 땐 살짝 튀어 오르며 돌아온다
+      curve: _pressed ? Curves.easeOut : AppMotion.spring,
       width: widget.width,
       height: widget.height,
       alignment: widget.alignment,

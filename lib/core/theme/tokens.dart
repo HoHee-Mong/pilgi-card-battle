@@ -243,6 +243,10 @@ abstract final class AppMotion {
   static const stampShow = Duration(milliseconds: 1250);
   static const hpBar = Duration(milliseconds: 700);
 
+  /// 오답: 좌우 두 번 흔들림
+  static const shake = Duration(milliseconds: 420);
+  static const shakeDistance = 10.0;
+
   /// 1위 왕관 살랑
   static const crownSway = Duration(milliseconds: 1800);
 

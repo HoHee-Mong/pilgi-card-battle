@@ -13,6 +13,8 @@ import '../../core/widgets/chunky_press.dart';
 import '../../core/widgets/outlined_text.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../../fx/haptics.dart';
+import '../../fx/motion.dart';
+import '../../fx/sound.dart';
 import '../bank/bank_repository.dart';
 import 'battle_repository.dart';
 import 'battle_result.dart';
@@ -67,6 +69,12 @@ class _BattleViewState extends ConsumerState<BattleView> {
   String? _myChoice;
   bool _submitted = false;
   bool _advancing = false;
+
+  /// 마지막으로 소리 낸 카운트다운 숫자 (같은 숫자에 두 번 안 울리게)
+  int? _lastBeep;
+
+  /// 오답이면 올려서 문제 카드를 흔든다
+  int _wrongShakes = 0;
   Timer? _ticker;
   final _shortAnswer = TextEditingController();
 
@@ -98,6 +106,7 @@ class _BattleViewState extends ConsumerState<BattleView> {
       _myChoice = null;
       _submitted = false;
       _advancing = false;
+      _lastBeep = null;
       _shortAnswer.clear();
     }
   }
@@ -136,6 +145,13 @@ class _BattleViewState extends ConsumerState<BattleView> {
   void _tick() {
     if (!mounted || widget.room.status != RoomStatus.playing) return;
     final phase = phaseAt(_elapsed, everyoneAnswered: _everyoneAnswered);
+    if (phase == RoundPhase.countdown) {
+      final n = BattleRules.countdown.inSeconds - _elapsed.inSeconds;
+      if (n > 0 && n != _lastBeep) {
+        _lastBeep = n;
+        Sound.play(Sfx.countdown);
+      }
+    }
     if (phase == RoundPhase.reveal) {
       _revealAt ??= DateTime.now();
       if (!_submitted) _submit(''); // 시간 초과 = 오답 (콤보 끊김)
@@ -175,8 +191,14 @@ class _BattleViewState extends ConsumerState<BattleView> {
             choice: choice,
             elapsedMs: _answerElapsedMs,
           );
-      if (choice.isNotEmpty) {
-        correct ? Haptics.light() : Haptics.medium();
+      // 정답: 가벼운 진동 + 정답음 / 오답·시간 초과: 묵직한 진동 + 오답음 + 카드 흔들림
+      if (correct) {
+        Haptics.light();
+        Sound.play(Sfx.correct);
+      } else {
+        Haptics.medium();
+        Sound.play(Sfx.wrong);
+        if (mounted) setState(() => _wrongShakes++);
       }
     } catch (_) {
       // 네트워크 실패 등: 다시 낼 수 있게 풀어 준다 (시간 안이면)
@@ -262,9 +284,16 @@ class _BattleViewState extends ConsumerState<BattleView> {
         if (phase == RoundPhase.countdown)
           _Countdown(left: BattleRules.countdown.inSeconds - _elapsed.inSeconds)
         else ...[
-          ChunkyCard(
-            shadowColor: AppColors.grape,
-            child: Text(card.question, style: AppTextStyles.heading),
+          // 문제가 바뀔 때마다 카드가 뒤집히며 나타나고, 틀리면 흔들린다
+          FlipIn(
+            key: ValueKey('flip-$_round'),
+            child: Shake(
+              trigger: _wrongShakes,
+              child: ChunkyCard(
+                shadowColor: AppColors.grape,
+                child: Text(card.question, style: AppTextStyles.heading),
+              ),
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           _AnswerArea(
