@@ -68,6 +68,8 @@ class Room {
     this.cardIds = const [],
     this.round = 0,
     this.roundStartedAt,
+    this.battleId = '',
+    this.rematchVotes = const [],
     required this.createdAt,
   });
 
@@ -104,6 +106,13 @@ class Room {
   /// 현재 문제 index
   final int round;
   final DateTime? roundStartedAt;
+
+  /// 이번 판 ID. 배틀을 시작할 때마다 새로 만든다 (배틀 기록 중복 저장 방지용).
+  /// 예전 방에는 없을 수 있다 (빈 문자열).
+  final String battleId;
+
+  /// 끝난 판에서 "다시 대결하기"를 누른 uid. 대기실에 있는 모두가 누르면 새 판이 시작된다.
+  final List<String> rematchVotes;
   final DateTime createdAt;
 
   bool isHost(String uid) => hostId == uid;
@@ -146,6 +155,8 @@ class Room {
       cardIds: readStringList(map['cardIds']),
       round: readInt(map['round']),
       roundStartedAt: readDateOrNull(map['roundStartedAt']),
+      battleId: map['battleId'] as String? ?? '',
+      rematchVotes: readStringList(map['rematchVotes']),
       createdAt: readDate(map['createdAt']),
     );
   }
@@ -167,6 +178,8 @@ class Room {
       'roundStartedAt': roundStartedAt == null
           ? null
           : writeDate(roundStartedAt!),
+      'battleId': battleId,
+      'rematchVotes': rematchVotes,
       'createdAt': writeDate(createdAt),
     };
   }

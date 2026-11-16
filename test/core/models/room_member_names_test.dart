@@ -43,4 +43,18 @@ void main() {
     });
     expect(memberNamesOf(room), ['선우', '승호', '친구']);
   });
+
+  test('battleId·rematchVotes: 없으면 기본값, 왕복 유지', () {
+    final old = Room.fromMap('r', base);
+    expect(old.battleId, '');
+    expect(old.rematchVotes, isEmpty);
+    final room = Room.fromMap('r', {
+      ...base,
+      'battleId': 'b1',
+      'rematchVotes': ['h'],
+    });
+    final again = Room.fromMap('r', room.toMap());
+    expect(again.battleId, 'b1');
+    expect(again.rematchVotes, ['h']);
+  });
 }
