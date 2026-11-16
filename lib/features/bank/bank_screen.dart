@@ -132,6 +132,13 @@ class _BankScreenState extends ConsumerState<BankScreen> {
       final voterText = room == null
           ? ''
           : voterSummaryFor(entry, room, myUid: myUid);
+      // 올린 사람·방장은 길게 눌러 문제은행에서 뺄 수 있다.
+      final onLongPress =
+          room != null &&
+              myUid != null &&
+              BankRepository.canRemove(entry, room, myUid)
+          ? () => _confirmRemove(room, entry, card, myUid)
+          : null;
       // 투표순 1위는 표가 하나 이상 있을 때만 크게 보여 준다.
       if (ranked && i == 0 && entry.voteCount > 0) {
         return _TopTile(
@@ -139,9 +146,11 @@ class _BankScreenState extends ConsumerState<BankScreen> {
           entry: entry,
           card: card,
           voterText: voterText,
+          onLongPress: onLongPress,
         );
       }
       return _RowTile(
+        onLongPress: onLongPress,
         roomId: widget.roomId,
         entry: entry,
         card: card,
@@ -169,6 +178,61 @@ class _BankScreenState extends ConsumerState<BankScreen> {
               ),
         ),
     ];
+  }
+
+  Future<void> _confirmRemove(
+    Room room,
+    BankEntry entry,
+    QuizCard? card,
+    String uid,
+  ) async {
+    Haptics.medium();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.paper,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          side: const BorderSide(color: AppColors.ink, width: AppBlock.border),
+        ),
+        title: const Text('문제은행에서 뺄까요?', style: AppTextStyles.heading),
+        content: Text(
+          '${card?.question ?? '이 문제'}\n\n받은 표 ${entry.voteCount}개도 같이 사라져요. '
+          '내 카드 자체는 지워지지 않아요.',
+          style: AppTextStyles.bodyS,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('그대로 두기'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('빼기'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await ref
+          .read(bankRepositoryProvider)
+          .removeCard(room: room, cardId: entry.cardId, uid: uid);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('문제은행에서 뺐어요')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e is BankException ? e.message : '빼지 못했어요. 잠시 후 다시 해 주세요.',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   /// 순위 배지 색: 1위 pink, 2위 sun, 3위 cyan, 4위 lime, 그 뒤는 cream
@@ -283,7 +347,10 @@ class _TopTile extends StatelessWidget {
     required this.entry,
     required this.card,
     required this.voterText,
+    this.onLongPress,
   });
+
+  final VoidCallback? onLongPress;
 
   final String roomId;
   final BankEntry entry;
@@ -300,6 +367,7 @@ class _TopTile extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           ChunkyCard(
+            onLongPress: onLongPress,
             color: AppColors.pink,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,7 +441,10 @@ class _RowTile extends StatelessWidget {
     required this.card,
     required this.badge,
     required this.badgeColor,
+    this.onLongPress,
   });
+
+  final VoidCallback? onLongPress;
 
   final String roomId;
   final BankEntry entry;
@@ -386,6 +457,7 @@ class _RowTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChunkyCard(
+      onLongPress: onLongPress,
       radius: AppRadius.button,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
