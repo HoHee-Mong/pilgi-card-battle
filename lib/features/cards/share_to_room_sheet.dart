@@ -9,14 +9,7 @@ import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_card.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../bank/bank_repository.dart';
-import '../room/room_repository.dart';
-
-/// 내가 들어간 방 목록 (B의 RoomRepository 사용). 로그인 전이면 빈 목록.
-final myRoomsProvider = StreamProvider<List<Room>>((ref) {
-  final uid = ref.watch(uidProvider);
-  if (uid == null) return Stream.value(const []);
-  return ref.watch(roomRepositoryProvider).watchMyRooms(uid);
-});
+import '../room/room_providers.dart';
 
 /// 검수 완료한 카드를 방 문제은행에 공유한다 (B의 `BankRepository.addCard`).
 /// 공유한 방 ID를 돌려준다. 취소하면 null.
