@@ -112,12 +112,16 @@ class BattleRepository {
       if (data == null) throw const BattleException('방이 없어졌어요.');
       final current = Room.fromMap(snap.id, data);
       if (keepsPlayerOnEnter(current, uid)) {
-        tx.update(room, {'players.$uid.nickname': nickname});
+        tx.update(room, {
+          'players.$uid.nickname': nickname,
+          'memberNames.$uid': nickname,
+        });
         return;
       }
       tx.update(room, {
         'players.$uid': RoomPlayer(nickname: nickname).toMap(),
         'memberIds': FieldValue.arrayUnion([uid]),
+        'memberNames.$uid': nickname,
       });
     });
   }

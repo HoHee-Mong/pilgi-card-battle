@@ -53,7 +53,8 @@ class RoomRepository {
     throw const RoomException('초대 코드를 만들지 못했어요. 다시 시도해 주세요.');
   }
 
-  /// 방을 만들고 만든 방을 돌려준다. 만든 사람이 방장이자 첫 참가자.
+  /// 방을 만들고 만든 방을 돌려준다. 만든 사람이 방장이자 첫 멤버.
+  /// 대기실 명단(players)에는 대기실 화면을 열 때 들어간다.
   Future<Room> createRoom({
     required String uid,
     required String nickname,
@@ -68,8 +69,8 @@ class RoomRepository {
       hostId: uid,
       subjectId: subjectId,
       name: name.trim(),
-      players: {uid: RoomPlayer(nickname: nickname)},
       memberIds: [uid],
+      memberNames: {uid: nickname},
       createdAt: DateTime.now(),
     );
     final data = room.toMap()..['createdAt'] = FieldValue.serverTimestamp();
@@ -87,7 +88,9 @@ class RoomRepository {
     return Room.fromMap(doc.id, doc.data());
   }
 
-  /// 초대 코드로 입장. 이미 멤버면 닉네임만 갱신하고 그대로 돌려준다.
+  /// 초대 코드로 입장: 멤버로 넣고 이름표를 남긴다. 이미 멤버면 닉네임만 갱신.
+  /// 대기실 명단(players)에는 넣지 않는다 — 넣으면 대기실을 안 연 친구가
+  /// "준비 중"으로 남아 방장이 배틀을 시작하지 못한다.
   Future<Room> joinByCode({
     required String code,
     required String uid,
@@ -97,13 +100,9 @@ class RoomRepository {
     if (room == null) {
       throw const RoomException('코드에 맞는 방이 없어요. 6자리 코드를 다시 확인해 주세요.');
     }
-    final existing = room.players[uid];
-    final player = (existing ?? const RoomPlayer(nickname: '')).copyWith(
-      nickname: nickname,
-    );
     await _rooms.doc(room.id).update({
-      'players.$uid': player.toMap(),
       'memberIds': FieldValue.arrayUnion([uid]),
+      'memberNames.$uid': nickname,
     });
     return Room(
       id: room.id,
@@ -114,8 +113,9 @@ class RoomRepository {
       weeks: room.weeks,
       questionCount: room.questionCount,
       status: room.status,
-      players: {...room.players, uid: player},
+      players: room.players,
       memberIds: room.isMember(uid) ? room.memberIds : [...room.memberIds, uid],
+      memberNames: {...room.memberNames, uid: nickname},
       cardIds: room.cardIds,
       round: room.round,
       roundStartedAt: room.roundStartedAt,
