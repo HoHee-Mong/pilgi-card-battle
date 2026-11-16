@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_providers.dart';
 import '../../core/models/subject.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/widgets/chunky_button.dart';
 import 'subject_providers.dart';
 
 /// 과목 만들기 / 수정 바텀시트. [subject]가 있으면 수정 모드.
@@ -15,9 +16,10 @@ Future<Subject?> showSubjectFormSheet(
   return showModalBottomSheet<Subject>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Theme.of(context).colorScheme.surface,
+    backgroundColor: AppColors.cream,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.card)),
+      side: BorderSide(color: AppColors.ink, width: AppBlock.border),
     ),
     builder: (_) => _SubjectFormSheet(subject: subject),
   );
@@ -136,13 +138,11 @@ class _SubjectFormSheetState extends ConsumerState<_SubjectFormSheet> {
                 : () => setState(() => _examDate = null),
           ),
           const SizedBox(height: AppSpacing.section),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: FilledButton(
-              onPressed: canSave ? _save : null,
-              child: Text(_isEdit ? '저장' : '만들기'),
-            ),
+          ChunkyButton(
+            label: _isEdit ? '저장' : '만들기',
+            large: true,
+            loading: _saving,
+            onPressed: canSave ? _save : null,
           ),
         ],
       ),
@@ -165,26 +165,35 @@ class _DateRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton.icon(
+          child: ChunkyButton(
             onPressed: onPick,
-            icon: const Icon(Icons.event_outlined, size: 20),
-            label: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                label,
-                style: AppTextStyles.body.copyWith(
-                  color: date == null ? AppColors.inkSub : AppColors.ink,
+            color: date == null ? AppColors.paper : AppColors.sun,
+            child: Row(
+              children: [
+                const Icon(Icons.event_outlined),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.body.copyWith(
+                      color: date == null ? AppColors.inkSub : AppColors.ink,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
         if (onClear != null) ...[
           const SizedBox(width: AppSpacing.sm),
-          IconButton(
+          ChunkyButton(
+            expand: false,
+            color: AppColors.paper,
+            semanticLabel: '시험일 지우기',
             onPressed: onClear,
-            tooltip: '시험일 지우기',
-            icon: const Icon(Icons.close),
+            child: const Icon(Icons.close),
           ),
         ],
       ],

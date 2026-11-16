@@ -6,15 +6,10 @@ import '../../core/auth/user_profile.dart';
 import '../../core/models/card.dart';
 import '../../core/models/room.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/widgets/chunky_card.dart';
+import '../../core/widgets/stat_chip.dart';
 import '../bank/bank_repository.dart';
-import '../room/room_repository.dart';
-
-/// 내가 들어간 방 목록 (B의 RoomRepository 사용). 로그인 전이면 빈 목록.
-final myRoomsProvider = StreamProvider<List<Room>>((ref) {
-  final uid = ref.watch(uidProvider);
-  if (uid == null) return Stream.value(const []);
-  return ref.watch(roomRepositoryProvider).watchMyRooms(uid);
-});
+import '../room/room_providers.dart';
 
 /// 검수 완료한 카드를 방 문제은행에 공유한다 (B의 `BankRepository.addCard`).
 /// 공유한 방 ID를 돌려준다. 취소하면 null.
@@ -25,9 +20,10 @@ Future<String?> showShareToRoomSheet(
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Theme.of(context).colorScheme.surface,
+    backgroundColor: AppColors.cream,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.card)),
+      side: BorderSide(color: AppColors.ink, width: AppBlock.border),
     ),
     builder: (_) => _ShareSheet(card: card),
   );
@@ -184,44 +180,42 @@ class _RoomRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: shared ? AppColors.lime : scheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(AppRadius.button),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.button),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(room.name, style: AppTextStyles.heading),
-                    Text(
-                      '${room.memberIds.length}명 · 코드 ${room.code}'
-                      '${sameSubject ? '' : ' · 다른 과목'}',
-                      style: AppTextStyles.caption,
-                    ),
-                  ],
-                ),
-              ),
-              if (busy)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
+    return ChunkyCard(
+      onTap: onTap,
+      color: shared ? AppColors.lime : AppColors.paper,
+      radius: AppRadius.button,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(room.name, style: AppTextStyles.heading),
                 Text(
-                  shared ? '공유됨' : '공유',
-                  style: AppTextStyles.button.copyWith(color: AppColors.ink),
+                  '${room.memberIds.length}명 · 코드 ${room.code}'
+                  '${sameSubject ? '' : ' · 다른 과목'}',
+                  style: AppTextStyles.caption.copyWith(color: AppColors.ink),
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: AppSpacing.sm),
+          if (busy)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: AppColors.ink,
+              ),
+            )
+          else
+            StatChip(
+              label: shared ? '공유됨' : '공유',
+              color: shared ? AppColors.paper : AppColors.pink,
+            ),
+        ],
       ),
     );
   }

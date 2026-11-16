@@ -3,8 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/source.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/widgets/chunky_button.dart';
+import '../../core/widgets/chunky_card.dart';
+import '../../core/widgets/stat_chip.dart';
 import '../cards/card_providers.dart';
 import '../cards/card_review_screen.dart';
+import '../subjects/arcade_app_bar.dart';
+import '../subjects/arcade_dialog.dart';
 import 'source_providers.dart';
 import 'source_tile.dart';
 
@@ -20,24 +25,14 @@ class SourceDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     StudySource source,
   ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('자료 기록을 지울까요?'),
-        content: const Text('이 자료로 만든 카드는 그대로 남아요.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('지우기'),
-          ),
-        ],
-      ),
+    final ok = await showArcadeConfirm(
+      context,
+      title: '자료 기록을 지울까요?',
+      message: '이 자료로 만든 카드는 그대로 남아요.',
+      confirmLabel: '지우기',
+      confirmColor: AppColors.wrong,
     );
-    if (ok != true) return;
+    if (!ok) return;
     await ref.read(sourceRepositoryProvider).delete(source);
     if (context.mounted) Navigator.of(context).pop();
   }
@@ -61,60 +56,58 @@ class SourceDetailScreen extends ConsumerWidget {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
-        appBar: AppBar(),
+        appBar: const ArcadeAppBar(),
         body: Center(child: Text('불러오지 못했어요\n$e')),
       ),
       data: (source) {
         if (source == null) {
-          return Scaffold(
-            appBar: AppBar(),
-            body: const Center(child: Text('지워진 자료예요')),
+          return const Scaffold(
+            appBar: ArcadeAppBar(),
+            body: Center(child: Text('지워진 자료예요')),
           );
         }
         return Scaffold(
-          appBar: AppBar(
-            actions: [
-              IconButton(
-                tooltip: '지우기',
+          appBar: ArcadeAppBar(
+            trailing: [
+              ArcadeIconButton(
+                icon: Icons.delete_outline,
+                semanticLabel: '지우기',
                 onPressed: () => _delete(context, ref, source),
-                icon: const Icon(Icons.delete_outline),
               ),
             ],
           ),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.page,
-              AppSpacing.sm,
+              0,
               AppSpacing.page,
-              AppSpacing.section,
+              AppSpacing.section * 2,
             ),
             children: [
               Row(
                 children: [
-                  Icon(sourceIcon(source.kind), size: 28, color: AppColors.ink),
+                  StatChip(label: '${source.week}주차', color: AppColors.paper),
+                  const SizedBox(width: AppSpacing.sm),
+                  StatChip(
+                    label: sourceStatusLabel(source.status),
+                    color: sourceStatusColor(source.status),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(sourceIcon(source.kind), size: 30, color: AppColors.ink),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(source.fileName, style: AppTextStyles.titleM),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  Text('${source.week}주차', style: AppTextStyles.label),
-                  const SizedBox(width: AppSpacing.sm),
-                  SourceStatusChip(status: source.status),
-                ],
-              ),
               const SizedBox(height: AppSpacing.section),
-              const Text('핵심 요약', style: AppTextStyles.heading),
-              const SizedBox(height: AppSpacing.md),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.page),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.card),
-                ),
+              ChunkyCard(
+                title: '핵심 요약',
                 child: Text(
                   source.summary ??
                       (source.isProcessing
@@ -129,25 +122,19 @@ class SourceDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.section),
               if (cards.isNotEmpty)
-                SizedBox(
-                  height: 52,
-                  child: FilledButton.icon(
-                    onPressed: () => _openReview(context, source),
-                    icon: const Icon(Icons.fact_check_outlined),
-                    label: Text(
-                      draftCount > 0
-                          ? '카드 ${cards.length}장 검수하기 · 초안 $draftCount'
-                          : '카드 ${cards.length}장 보기',
-                    ),
-                  ),
+                ChunkyButton(
+                  label: draftCount > 0
+                      ? '카드 ${cards.length}장 검수하기 · 초안 $draftCount'
+                      : '카드 ${cards.length}장 보기',
+                  icon: Icons.fact_check_outlined,
+                  large: true,
+                  color: draftCount > 0 ? AppColors.pink : AppColors.lime,
+                  onPressed: () => _openReview(context, source),
                 )
               else if (!source.isProcessing)
-                Text(
-                  '이 자료로 만든 카드가 없어요.',
-                  style: AppTextStyles.body.copyWith(color: AppColors.inkSub),
-                ),
+                const ArcadeEmpty(message: '이 자료로 만든 카드가 없어요.'),
               const SizedBox(height: AppSpacing.md),
-              Text(
+              const Text(
                 '원본 파일은 저장하지 않아요. 카드를 더 뽑으려면 주차 화면에서 자료를 다시 올려 주세요.',
                 style: AppTextStyles.caption,
               ),

@@ -6,6 +6,11 @@ import '../../core/auth/auth_providers.dart';
 import '../../core/auth/user_profile.dart';
 import '../../core/models/card.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/widgets/chunky_button.dart';
+import '../../core/widgets/chunky_card.dart';
+import '../../core/widgets/stat_chip.dart';
+import '../subjects/arcade_app_bar.dart';
+import '../subjects/arcade_dialog.dart';
 import 'card_providers.dart';
 import 'card_similarity.dart';
 import 'share_to_room_sheet.dart';
@@ -194,66 +199,42 @@ class _CardEditScreenState extends ConsumerState<CardEditScreen> {
   }
 
   /// 비슷한 문제가 있을 때 저장 전에 한 번 묻는다.
-  Future<bool> _confirmSimilar() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('비슷한 문제가 ${_similar.length}개 있어요'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final s in _similar) ...[
-              Text(
-                s.card.question,
-                style: AppTextStyles.bodyS.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                '${s.card.week}주차 · ${s.card.isVerified ? '검수 완료' : '초안'}',
-                style: AppTextStyles.caption,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-            const Text('그래도 따로 저장할까요?', style: AppTextStyles.body),
+  Future<bool> _confirmSimilar() {
+    return showArcadeConfirm(
+      context,
+      title: '비슷한 문제가 ${_similar.length}개 있어요',
+      confirmLabel: '그래도 저장',
+      cancelLabel: '다시 볼게요',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final s in _similar) ...[
+            Text(
+              s.card.question,
+              style: AppTextStyles.bodyS.copyWith(fontWeight: FontWeight.w700),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              '${s.card.week}주차 · ${s.card.isVerified ? '검수 완료' : '초안'}',
+              style: AppTextStyles.caption,
+            ),
+            const SizedBox(height: AppSpacing.sm),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('다시 볼게요'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('그래도 저장'),
-          ),
+          const Text('그래도 따로 저장할까요?', style: AppTextStyles.body),
         ],
       ),
     );
-    return ok == true;
   }
 
   Future<void> _delete() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('카드를 지울까요?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('지우기'),
-          ),
-        ],
-      ),
+    final ok = await showArcadeConfirm(
+      context,
+      title: '카드를 지울까요?',
+      confirmLabel: '지우기',
+      confirmColor: AppColors.wrong,
     );
-    if (ok != true) return;
+    if (!ok) return;
     await ref.read(cardRepositoryProvider).delete(widget.card!.id);
     if (mounted) Navigator.of(context).pop(true);
   }
@@ -276,41 +257,49 @@ class _CardEditScreenState extends ConsumerState<CardEditScreen> {
       _refreshSimilar();
     });
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? '카드 검수' : '직접 문제 쓰기'),
-        actions: [
+      appBar: ArcadeAppBar(
+        trailing: [
           if (_isEdit)
-            IconButton(
-              tooltip: '지우기',
+            ArcadeIconButton(
+              icon: Icons.delete_outline,
+              semanticLabel: '지우기',
               onPressed: _delete,
-              icon: const Icon(Icons.delete_outline),
             ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.page,
-          AppSpacing.sm,
+          0,
           AppSpacing.page,
-          AppSpacing.section,
+          AppSpacing.section * 2,
         ),
         children: [
+          ArcadeTitle(
+            title: _isEdit ? '카드 검수' : '직접 문제 쓰기',
+            subtitle: card == null
+                ? '${widget.week}주차 · 내가 내는 문제'
+                : '출처: ${card.sourceLabel}',
+          ),
           if (card != null) ...[
+            const SizedBox(height: AppSpacing.md),
             Row(
               children: [
-                _StatusChip(status: card.status),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    '출처: ${card.sourceLabel}',
-                    style: AppTextStyles.caption,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                StatChip(
+                  label: card.isVerified ? '검수 완료' : '초안',
+                  color: card.isVerified ? AppColors.lime : AppColors.paper,
                 ),
+                if (card.roomIds.isNotEmpty) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  StatChip(
+                    label: '공유 ${card.roomIds.length}곳',
+                    color: AppColors.cyan,
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: AppSpacing.lg),
           ],
+          const SizedBox(height: AppSpacing.section),
           const Text('유형', style: AppTextStyles.heading),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
@@ -373,35 +362,29 @@ class _CardEditScreenState extends ConsumerState<CardEditScreen> {
             decoration: const InputDecoration(hintText: '예: TCP 연결 수립'),
           ),
           const SizedBox(height: AppSpacing.section),
-          SizedBox(
-            height: 52,
-            child: FilledButton.icon(
-              onPressed: _saving ? null : () => _save(verify: true),
-              icon: const Icon(Icons.check),
-              label: Text(_isEdit ? '검수 완료' : '검수 완료로 저장'),
-            ),
+          ChunkyButton(
+            label: _isEdit ? '검수 완료' : '검수 완료로 저장',
+            icon: Icons.check,
+            large: true,
+            color: AppColors.lime,
+            loading: _saving,
+            onPressed: () => _save(verify: true),
           ),
           const SizedBox(height: AppSpacing.sm),
-          SizedBox(
-            height: 48,
-            child: OutlinedButton(
-              onPressed: _saving ? null : () => _save(verify: false),
-              child: const Text('초안으로 저장'),
-            ),
+          ChunkyButton(
+            label: '초안으로 저장',
+            color: AppColors.paper,
+            onPressed: _saving ? null : () => _save(verify: false),
           ),
           if (card != null && card.isVerified) ...[
             const SizedBox(height: AppSpacing.section),
-            SizedBox(
-              height: 52,
-              child: OutlinedButton.icon(
-                onPressed: _saving ? null : () => _share(card),
-                icon: const Icon(Icons.group_add_outlined),
-                label: Text(
-                  card.roomIds.isEmpty
-                      ? '방에 공유'
-                      : '방에 공유 (${card.roomIds.length}곳에 공유됨)',
-                ),
-              ),
+            ChunkyButton(
+              label: card.roomIds.isEmpty
+                  ? '방에 공유'
+                  : '방에 공유 (${card.roomIds.length}곳에 공유됨)',
+              icon: Icons.group_add_outlined,
+              color: AppColors.cyan,
+              onPressed: _saving ? null : () => _share(card),
             ),
           ],
         ],
@@ -465,36 +448,6 @@ class _CardEditScreenState extends ConsumerState<CardEditScreen> {
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
-
-  final CardStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final verified = status == CardStatus.verified;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: verified
-            ? AppColors.lime
-            : Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.chip),
-      ),
-      child: Text(
-        verified ? '검수 완료' : '초안',
-        style: AppTextStyles.caption.copyWith(
-          color: AppColors.ink,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
 /// 문제 칸 아래 "비슷한 문제가 있어요" 안내. 누르면 그 카드로 간다.
 class _SimilarBanner extends StatelessWidget {
   const _SimilarBanner({required this.similar, required this.onTap});
@@ -504,30 +457,20 @@ class _SimilarBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
+    return ChunkyCard(
+      color: AppColors.sun,
+      radius: AppRadius.button,
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: scheme.errorContainer,
-        borderRadius: BorderRadius.circular(AppRadius.button),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.info_outline,
-                size: 18,
-                color: scheme.onErrorContainer,
-              ),
+              const Icon(Icons.info_outline, size: 20, color: AppColors.ink),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 '비슷한 문제가 ${similar.length}개 있어요',
-                style: AppTextStyles.bodyS.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onErrorContainer,
-                ),
+                style: AppTextStyles.heading,
               ),
             ],
           ),
@@ -543,9 +486,7 @@ class _SimilarBanner extends StatelessWidget {
                     Expanded(
                       child: Text(
                         s.card.question,
-                        style: AppTextStyles.caption.copyWith(
-                          color: scheme.onErrorContainer,
-                        ),
+                        style: AppTextStyles.bodyS,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -554,13 +495,13 @@ class _SimilarBanner extends StatelessWidget {
                     Text(
                       '${s.card.week}주차 · ${(s.score * 100).round()}%',
                       style: AppTextStyles.caption.copyWith(
-                        color: scheme.onErrorContainer,
+                        color: AppColors.ink,
                       ),
                     ),
-                    Icon(
+                    const Icon(
                       Icons.chevron_right,
-                      size: 16,
-                      color: scheme.onErrorContainer,
+                      size: 18,
+                      color: AppColors.ink,
                     ),
                   ],
                 ),

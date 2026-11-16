@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/card.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/widgets/chunky_button.dart';
+import '../../core/widgets/stat_chip.dart';
+import '../subjects/arcade_app_bar.dart';
+import '../subjects/arcade_dialog.dart';
 import 'card_edit_screen.dart';
 import 'card_list_tile.dart';
 import 'card_providers.dart';
@@ -24,24 +28,14 @@ class CardReviewScreen extends ConsumerWidget {
     WidgetRef ref,
     List<QuizCard> drafts,
   ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('초안 ${drafts.length}장을 모두 검수 완료로 바꿀까요?'),
-        content: const Text('AI가 만든 문제는 틀릴 수 있어요. 한 장씩 보고 넘기는 걸 권해요.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('모두 완료'),
-          ),
-        ],
-      ),
+    final ok = await showArcadeConfirm(
+      context,
+      title: '초안 ${drafts.length}장을 모두 검수 완료로 바꿀까요?',
+      message: 'AI가 만든 문제는 틀릴 수 있어요. 한 장씩 보고 넘기는 걸 권해요.',
+      confirmLabel: '모두 완료',
+      confirmColor: AppColors.lime,
     );
-    if (ok != true) return;
+    if (!ok) return;
     final repo = ref.read(cardRepositoryProvider);
     for (final c in drafts) {
       await repo.setStatus(c.id, CardStatus.verified);
@@ -52,17 +46,15 @@ class CardReviewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cards = ref.watch(sourceCardsProvider(sourceId));
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: const ArcadeAppBar(),
       body: cards.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('불러오지 못했어요\n$e')),
         data: (list) {
           if (list.isEmpty) {
-            return Center(
-              child: Text(
-                '이 자료로 만든 카드가 없어요.',
-                style: AppTextStyles.body.copyWith(color: AppColors.inkSub),
-              ),
+            return const Padding(
+              padding: EdgeInsets.all(AppSpacing.page),
+              child: ArcadeEmpty(message: '이 자료로 만든 카드가 없어요.'),
             );
           }
           final drafts = list.where((c) => !c.isVerified).toList();
@@ -82,27 +74,36 @@ class CardReviewScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.page,
-              AppSpacing.sm,
+              0,
               AppSpacing.page,
-              AppSpacing.section,
+              AppSpacing.section * 2,
             ),
             children: [
+              ArcadeTitle(title: '카드 검수', subtitle: title),
+              const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      '초안 ${drafts.length} · 검수 완료 ${verified.length}',
-                      style: AppTextStyles.label,
-                    ),
+                  StatChip(
+                    label: '초안 ${drafts.length}',
+                    color: drafts.isEmpty ? AppColors.paper : AppColors.pink,
                   ),
-                  if (drafts.isNotEmpty)
-                    TextButton(
-                      onPressed: () => _verifyAll(context, ref, drafts),
-                      child: const Text('모두 완료'),
-                    ),
+                  const SizedBox(width: AppSpacing.sm),
+                  StatChip(
+                    label: '검수 완료 ${verified.length}',
+                    color: AppColors.lime,
+                  ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm),
+              if (drafts.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.section),
+                ChunkyButton(
+                  label: '초안 ${drafts.length}장 모두 완료',
+                  icon: Icons.done_all,
+                  color: AppColors.paper,
+                  onPressed: () => _verifyAll(context, ref, drafts),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.section),
               for (final c in [...drafts, ...verified]) ...[
                 CardListTile(
                   card: c,

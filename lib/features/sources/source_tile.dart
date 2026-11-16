@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/source.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/widgets/chunky_card.dart';
+import '../../core/widgets/stat_chip.dart';
 
 IconData sourceIcon(SourceKind kind) => switch (kind) {
   SourceKind.image => Icons.image_outlined,
@@ -16,7 +18,14 @@ String sourceStatusLabel(SourceStatus status) => switch (status) {
   SourceStatus.failed => '실패',
 };
 
-/// 자료 목록 한 줄. 탭하면 상세로.
+Color sourceStatusColor(SourceStatus status) => switch (status) {
+  SourceStatus.done => AppColors.lime,
+  SourceStatus.failed => AppColors.wrong,
+  SourceStatus.processing => AppColors.sun,
+  SourceStatus.uploaded => AppColors.cream,
+};
+
+/// 자료 목록 한 줄 블록. 탭하면 상세로.
 class SourceTile extends StatelessWidget {
   const SourceTile({super.key, required this.source, required this.onTap});
 
@@ -25,40 +34,55 @@ class SourceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Row(
-            children: [
-              Icon(sourceIcon(source.kind), size: 26, color: AppColors.ink),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      source.fileName,
-                      style: AppTextStyles.bodyS.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    SourceStatusChip(status: source.status),
-                  ],
+    return ChunkyCard(
+      onTap: onTap,
+      radius: AppRadius.button,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        children: [
+          _IconBlock(icon: sourceIcon(source.kind)),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  source.fileName,
+                  style: AppTextStyles.bodyS.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const Icon(Icons.chevron_right, color: AppColors.inkSub),
-            ],
+                const SizedBox(height: AppSpacing.xs),
+                SourceStatusChip(status: source.status),
+              ],
+            ),
           ),
-        ),
+          const Icon(Icons.chevron_right, color: AppColors.inkSub),
+        ],
       ),
+    );
+  }
+}
+
+/// 시안 랭킹 목록의 번호 블록처럼 테두리 있는 네모 안 아이콘.
+class _IconBlock extends StatelessWidget {
+  const _IconBlock({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: AppColors.cyan,
+        borderRadius: BorderRadius.circular(AppRadius.chip),
+        border: Border.all(color: AppColors.ink, width: AppBlock.border),
+      ),
+      child: Icon(icon, size: 24, color: AppColors.ink),
     );
   }
 }
@@ -70,28 +94,10 @@ class SourceStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final highlight = status == SourceStatus.done;
-    final failed = status == SourceStatus.failed;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: highlight
-            ? AppColors.lime
-            : failed
-            ? AppColors.wrong
-            : Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.chip),
-      ),
-      child: Text(
-        sourceStatusLabel(status),
-        style: AppTextStyles.caption.copyWith(
-          color: AppColors.ink,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+    return StatChip(
+      label: sourceStatusLabel(status),
+      color: sourceStatusColor(status),
+      border: false,
     );
   }
 }
