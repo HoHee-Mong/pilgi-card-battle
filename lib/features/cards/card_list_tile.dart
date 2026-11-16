@@ -20,17 +20,25 @@ Color cardTypeColor(CardType t) => switch (t) {
 
 /// 카드 목록 한 줄 블록: 유형 블록, 문제, 정답, 상태·개념 태그.
 /// [similarCount]가 0보다 크면 "비슷한 문제 N" 표시를 붙인다.
+/// [caption]을 주면 "정답: …" 줄 대신 그 글을 쓴다 (방 카드: 작성자·출처).
+/// [showStatus]가 false면 검수 상태·공유 태그를 숨긴다. [trailing]은 오른쪽 끝(투표 버튼 등).
 class CardListTile extends StatelessWidget {
   const CardListTile({
     super.key,
     required this.card,
     required this.onTap,
     this.similarCount = 0,
+    this.caption,
+    this.showStatus = true,
+    this.trailing,
   });
 
   final QuizCard card;
   final VoidCallback onTap;
   final int similarCount;
+  final String? caption;
+  final bool showStatus;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -57,39 +65,49 @@ class CardListTile extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  '정답: ${card.answer}'
-                  '${card.concept.isNotEmpty ? ' · ${card.concept}' : ''}',
+                  caption ??
+                      '정답: ${card.answer}'
+                          '${card.concept.isNotEmpty ? ' · ${card.concept}' : ''}',
                   style: AppTextStyles.caption,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: [
-                    StatChip(
-                      label: card.isVerified ? '검수 완료' : '초안',
-                      color: card.isVerified ? AppColors.lime : AppColors.cream,
-                      border: false,
-                    ),
-                    if (card.roomIds.isNotEmpty)
-                      StatChip(
-                        label: '공유 ${card.roomIds.length}곳',
-                        color: AppColors.cyan,
-                        border: false,
-                      ),
-                    if (similarCount > 0)
-                      StatChip(
-                        label: '비슷한 문제 $similarCount',
-                        color: AppColors.wrong,
-                        border: false,
-                      ),
-                  ],
-                ),
+                if (showStatus || similarCount > 0) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      if (showStatus)
+                        StatChip(
+                          label: card.isVerified ? '검수 완료' : '초안',
+                          color: card.isVerified
+                              ? AppColors.lime
+                              : AppColors.cream,
+                          border: false,
+                        ),
+                      if (showStatus && card.roomIds.isNotEmpty)
+                        StatChip(
+                          label: '공유 ${card.roomIds.length}곳',
+                          color: AppColors.cyan,
+                          border: false,
+                        ),
+                      if (similarCount > 0)
+                        StatChip(
+                          label: '비슷한 문제 $similarCount',
+                          color: AppColors.wrong,
+                          border: false,
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
+          if (trailing != null) ...[
+            const SizedBox(width: AppSpacing.sm),
+            trailing!,
+          ],
         ],
       ),
     );

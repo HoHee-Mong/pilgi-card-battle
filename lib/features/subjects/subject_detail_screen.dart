@@ -6,7 +6,9 @@ import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_card.dart';
 import '../../core/widgets/chunky_press.dart';
 import '../../core/widgets/stat_chip.dart';
+import '../../core/widgets/chunky_button.dart';
 import '../cards/card_providers.dart';
+import '../notebook/notebook_screen.dart';
 import 'arcade_app_bar.dart';
 import 'arcade_dialog.dart';
 import 'subject_form_sheet.dart';
@@ -109,6 +111,17 @@ class SubjectDetailScreen extends ConsumerWidget {
             ),
             children: [
               _BossCard(subject: subject, dday: dday, cardCount: cardCount),
+              const SizedBox(height: AppSpacing.section),
+              ChunkyButton(
+                label: '족보 노트',
+                icon: Icons.menu_book_outlined,
+                color: AppColors.cyan,
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => NotebookScreen(subject: subject),
+                  ),
+                ),
+              ),
               const SizedBox(height: AppSpacing.section),
               const ArcadeSectionHeader(title: '주차 선택'),
               const SizedBox(height: AppSpacing.xs),
