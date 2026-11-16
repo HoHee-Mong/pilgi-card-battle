@@ -107,10 +107,13 @@ class _WaitingRoomScreenState extends ConsumerState<WaitingRoomScreen> {
     final bank = ref.watch(_bankProvider(widget.roomId)).value ?? const [];
     final uid = _uid ?? ref.watch(uidProvider);
 
-    final playing = room != null && room.status != RoomStatus.waiting;
     return Scaffold(
-      // 대기실은 grape, 배틀 중은 ink (시안: 모의고사 보스전 배경)
-      backgroundColor: playing ? AppColors.ink : AppColors.grape,
+      // 대기실 grape, 배틀 중 ink (보스전 시안), 결과 sun (결과 시안)
+      backgroundColor: switch (room?.status) {
+        RoomStatus.playing => AppColors.ink,
+        RoomStatus.finished => AppColors.sun,
+        _ => AppColors.grape,
+      },
       body: SafeArea(
         child: room == null || uid == null
             ? const Center(

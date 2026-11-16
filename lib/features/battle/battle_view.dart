@@ -15,6 +15,7 @@ import '../../core/widgets/stat_chip.dart';
 import '../../fx/haptics.dart';
 import '../bank/bank_repository.dart';
 import 'battle_repository.dart';
+import 'battle_result.dart';
 import 'battle_rules.dart';
 
 /// 출제된 카드들 (cardIds를 쉼표로 이은 문자열 → 카드, 순서 유지)
@@ -168,9 +169,10 @@ class _BattleViewState extends ConsumerState<BattleView> {
     final cardsAsync = ref.watch(_battleCardsProvider(room.cardIds.join(',')));
 
     if (room.status == RoomStatus.finished) {
-      return _Finished(
+      return BattleResult(
         room: room,
         myUid: widget.uid,
+        cards: cardsAsync.value ?? const [],
         onBackToWaiting: widget.onBackToWaiting,
       );
     }
@@ -569,78 +571,6 @@ class _RevealBanner extends StatelessWidget {
           textAlign: TextAlign.center,
           style: AppTextStyles.label.copyWith(color: AppColors.cream),
         ),
-      ],
-    );
-  }
-}
-
-/// 배틀 끝: 순위 (자세한 결과 화면은 다음 작업)
-class _Finished extends StatelessWidget {
-  const _Finished({
-    required this.room,
-    required this.myUid,
-    required this.onBackToWaiting,
-  });
-
-  final Room room;
-  final String myUid;
-  final VoidCallback onBackToWaiting;
-
-  @override
-  Widget build(BuildContext context) {
-    final ranked = room.players.entries.toList()
-      ..sort((a, b) => b.value.score.compareTo(a.value.score));
-    final winner = ranked.isEmpty ? null : ranked.first;
-
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.page),
-      children: [
-        const SizedBox(height: AppSpacing.section),
-        Center(
-          child: OutlinedText(
-            winner?.key == myUid ? '우승!' : '배틀 끝',
-            color: AppColors.sun,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.section),
-        for (final (i, e) in ranked.indexed)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: ChunkyCard(
-              color: i == 0 ? AppColors.sun : AppColors.paper,
-              shadowColor: AppColors.grape,
-              radius: AppRadius.button,
-              child: Row(
-                children: [
-                  Text('${i + 1}위', style: AppTextStyles.heading),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Text(
-                      e.key == myUid
-                          ? '${e.value.nickname} (나)'
-                          : e.value.nickname,
-                      style: AppTextStyles.heading,
-                    ),
-                  ),
-                  Text('${e.value.score}점', style: AppTextStyles.heading),
-                ],
-              ),
-            ),
-          ),
-        const SizedBox(height: AppSpacing.section),
-        if (room.isHost(myUid))
-          ChunkyButton(
-            label: '대기실로 (한 판 더)',
-            color: AppColors.lime,
-            shadowColor: AppColors.grape,
-            onPressed: onBackToWaiting,
-          )
-        else
-          Text(
-            '방장이 한 판 더 하면 대기실로 돌아가요',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.label.copyWith(color: AppColors.cream),
-          ),
       ],
     );
   }

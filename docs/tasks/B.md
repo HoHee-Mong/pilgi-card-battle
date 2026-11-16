@@ -18,7 +18,7 @@
 - [x] 배틀 출제: bank에서 투표 많은 순 우선으로 `cardIds`
 - [x] 라운드: 3-2-1 → 문제 → 15초 → 제출(`answers`) → 정답 공개 → 다음
 - [x] 점수·콤보, 실시간 점수 막대
-- [ ] 결과: 순위, 정답률, 문제별 `VoteButton`, 오답 → `attempts`(mode: battle)
+- [x] 결과: 순위, 정답률, 문제별 `VoteButton`, 오답 → `attempts`(mode: battle)
 - [ ] 예외: 상대 나감, 백그라운드, 동시 제출
 
 ## 3주차
