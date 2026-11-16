@@ -5,6 +5,7 @@ import '../../core/models/room.dart';
 import '../../core/models/attempt.dart';
 import '../../core/models/card.dart';
 import '../bank/bank_repository.dart';
+import 'battle_record.dart';
 import 'battle_rules.dart';
 
 final battleRepositoryProvider = Provider<BattleRepository>(
@@ -313,12 +314,16 @@ class BattleRepository {
   /// 시간 초과(빈 답)도 틀린 것으로 저장한다.
   /// 이미 저장한 답은 건너뛰고, 저장한 답에는 `saved: true`를 남긴다 (같은 배치라 함께 성공·실패).
   /// 반환값: 이번에 새로 저장한 게 있는지 (없으면 XP도 다시 주지 않는다).
+  ///
+  /// [record]가 있으면 같은 배치로 `users/{uid}/battles/{battleId}`에 배틀 기록도 남긴다
+  /// (battleId가 같으면 같은 문서라 두 번 저장돼도 한 개).
   Future<bool> saveAttempts({
     required String roomId,
     required String uid,
     required List<QuizCard> cards,
     required List<BattleAnswer> answers,
     required List<String> cardIds,
+    BattleRecord? record,
   }) async {
     final byId = {for (final c in cards) c.id: c};
     final batch = _db.batch();
@@ -345,8 +350,36 @@ class BattleRepository {
       any = true;
     }
     if (!any) return false;
+    if (record != null) {
+      batch.set(_records(uid).doc(_recordId(record)), record.toMap());
+    }
     await batch.commit();
     return true;
+  }
+
+  CollectionReference<Map<String, dynamic>> _records(String uid) =>
+      _db.collection('users').doc(uid).collection('battles');
+
+  /// 예전 방(battleId 없음)은 방 ID + 시각으로 만든다
+  static String _recordId(BattleRecord r) =>
+      r.id.isNotEmpty ? r.id : '${r.roomId}_${r.at.millisecondsSinceEpoch}';
+
+  /// 배틀 기록에 받은 XP 채우기
+  Future<void> setRecordXp(String uid, BattleRecord record, int xp) {
+    return _records(uid).doc(_recordId(record)).update({'xp': xp});
+  }
+
+  /// 내 배틀 기록 (최근 순, [limit]개). 읽기만 한다.
+  Stream<List<BattleRecord>> watchRecords(String uid, {int limit = 50}) {
+    return _records(uid)
+        .orderBy('at', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map(
+          (snap) => [
+            for (final d in snap.docs) BattleRecord.fromMap(d.id, d.data()),
+          ],
+        );
   }
 
   /// 이번 라운드에 들어온 답들 (실시간)
