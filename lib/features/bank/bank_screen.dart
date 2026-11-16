@@ -72,10 +72,7 @@ class _BankScreenState extends ConsumerState<BankScreen> {
             const SizedBox(height: AppSpacing.section),
             const Text('예상 문제 랭킹', style: AppTextStyles.titleL),
             const SizedBox(height: AppSpacing.xs),
-            const Text(
-              '우리가 ‘나올 것 같다’고 고른 문제들',
-              style: AppTextStyles.label,
-            ),
+            const Text('우리가 ‘나올 것 같다’고 고른 문제들', style: AppTextStyles.label),
             const SizedBox(height: AppSpacing.section),
             _SortTabs(
               value: _sort,
@@ -183,7 +180,7 @@ class _Header extends StatelessWidget {
         const Spacer(),
         if (room != null)
           Flexible(
-            child: StatChip(label: '${room.name} · ${room.players.length}명'),
+            child: StatChip(label: '${room.name} · ${room.memberIds.length}명'),
           ),
       ],
     );

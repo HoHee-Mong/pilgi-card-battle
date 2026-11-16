@@ -46,9 +46,9 @@ abstract final class AppTheme {
     );
     const buttonMinSize = Size(AppSpacing.minTouch, AppSpacing.minTouch);
     OutlineInputBorder inputBorder(double width) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.button),
-          borderSide: BorderSide(color: AppColors.ink, width: width),
-        );
+      borderRadius: BorderRadius.circular(AppRadius.button),
+      borderSide: BorderSide(color: AppColors.ink, width: width),
+    );
 
     return ThemeData(
       useMaterial3: true,
