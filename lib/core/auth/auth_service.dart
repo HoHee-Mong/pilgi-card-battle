@@ -1,8 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-
-import 'user_profile.dart';
 
 /// 로그인: Google 계정 또는 게스트(익명).
 ///
@@ -13,17 +10,28 @@ import 'user_profile.dart';
 ///
 /// 라우터가 [refreshListenable]로 듣는다 ([canEnter]가 바뀌면 화면 이동).
 class AuthService extends ChangeNotifier {
-  AuthService(this._auth, this._profiles) {
+  AuthService(this._auth) {
     _auth.userChanges().listen((_) => notifyListeners());
   }
 
   final FirebaseAuth _auth;
-  final UserProfileRepository _profiles;
 
   /// 이번 실행에서 "게스트로 둘러보기"를 눌렀는지
   bool _guest = false;
 
   User? get user => _auth.currentUser;
+
+  /// 방금 로그인한 Google 계정 이름 (이름 정하기 칸에 미리 채움)
+  String? lastGoogleName;
+
+  /// Google 계정 이름 (없으면 null)
+  String? get googleName {
+    final fromProvider = user?.providerData
+        .where((p) => p.providerId == 'google.com')
+        .map((p) => p.displayName)
+        .firstOrNull;
+    return lastGoogleName ?? fromProvider ?? user?.displayName;
+  }
 
   bool get isGoogle =>
       user?.providerData.any((p) => p.providerId == 'google.com') ?? false;
@@ -67,10 +75,8 @@ class AuthService extends ChangeNotifier {
           : await _auth.signInWithProvider(provider);
     }
     _guest = false;
-    final signed = cred.user;
-    if (signed != null) {
-      await _profiles.adoptName(signed.uid, signed.displayName);
-    }
+    // 이름은 로비의 "이름 정하기"에서 정한다 (Google 이름을 미리 채워 줌)
+    lastGoogleName = cred.user?.displayName;
     notifyListeners();
   }
 
@@ -101,7 +107,4 @@ class AuthMessage implements Exception {
 }
 
 /// 앱 전체에서 하나. 라우터(전역)도 이걸 쓴다.
-final authService = AuthService(
-  FirebaseAuth.instance,
-  UserProfileRepository(FirebaseFirestore.instance),
-);
+final authService = AuthService(FirebaseAuth.instance);
