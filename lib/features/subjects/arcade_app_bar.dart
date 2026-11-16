@@ -13,10 +13,14 @@ class ArcadeAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.trailing = const [],
     this.showBack = true,
     this.backgroundColor,
+    this.leading,
   });
 
   final List<Widget> trailing;
   final bool showBack;
+
+  /// 뒤로가기 대신 왼쪽에 둘 버튼 (예: 풀이 화면의 닫기)
+  final Widget? leading;
 
   /// 비우면 테마의 scaffold 배경(cream)
   final Color? backgroundColor;
@@ -44,7 +48,9 @@ class ArcadeAppBar extends StatelessWidget implements PreferredSizeWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (canPop)
+          if (leading != null)
+            leading!
+          else if (canPop)
             ArcadeIconButton(
               icon: Icons.chevron_left,
               onPressed: () => Navigator.of(context).maybePop(),

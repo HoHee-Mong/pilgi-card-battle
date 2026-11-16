@@ -29,6 +29,18 @@ class _SoloSetupScreenState extends ConsumerState<SoloSetupScreen> {
   int _count = 10;
   bool _includeDrafts = false;
 
+  /// 풀이·결과는 하단 탭 없이 전체 화면으로 띄운다. 결과에서 "끝내기"면 과목 화면으로 돌아간다.
+  Future<void> _start(List<QuizCard> cards) async {
+    final outcome = await Navigator.of(context, rootNavigator: true)
+        .push<String>(
+          MaterialPageRoute<String>(
+            builder: (_) =>
+                SoloPlayScreen(subject: widget.subject, cards: cards),
+          ),
+        );
+    if (outcome == 'done' && mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final subject = widget.subject;
@@ -62,17 +74,12 @@ class _SoloSetupScreenState extends ConsumerState<SoloSetupScreen> {
           large: true,
           onPressed: willAsk == 0
               ? null
-              : () => Navigator.of(context).pushReplacement(
-                  MaterialPageRoute<void>(
-                    builder: (_) => SoloPlayScreen(
-                      subject: subject,
-                      cards: buildQuizSet(
-                        pool,
-                        weeks: _weeks,
-                        types: _types,
-                        count: _count,
-                      ),
-                    ),
+              : () => _start(
+                  buildQuizSet(
+                    pool,
+                    weeks: _weeks,
+                    types: _types,
+                    count: _count,
                   ),
                 ),
         ),

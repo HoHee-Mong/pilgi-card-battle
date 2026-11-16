@@ -8,7 +8,6 @@ import '../../core/widgets/outlined_text.dart';
 import '../../core/widgets/vote_button.dart';
 import '../cards/card_list_tile.dart';
 import 'solo_model.dart';
-import 'solo_setup_screen.dart';
 
 /// 혼자 풀기 결과 (sun 배경, 시안 game-result 구성). 틀린 문제는 오답 노트로 자동 저장됨.
 class SoloResultScreen extends StatelessWidget {
@@ -163,11 +162,7 @@ class SoloResultScreen extends StatelessWidget {
                     label: '한 판 더',
                     color: AppColors.paper,
                     large: true,
-                    onPressed: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute<void>(
-                        builder: (_) => SoloSetupScreen(subject: subject),
-                      ),
-                    ),
+                    onPressed: () => Navigator.of(context).pop('again'),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -175,7 +170,7 @@ class SoloResultScreen extends StatelessWidget {
                   child: ChunkyButton(
                     label: '끝내기',
                     large: true,
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => Navigator.of(context).pop('done'),
                   ),
                 ),
               ],

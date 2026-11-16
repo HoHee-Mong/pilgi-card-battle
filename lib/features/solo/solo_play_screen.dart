@@ -76,7 +76,7 @@ class _SoloPlayScreenState extends ConsumerState<SoloPlayScreen> {
     }
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
+      MaterialPageRoute<String>(
         builder: (_) => SoloResultScreen(
           subject: widget.subject,
           results: List.unmodifiable(_results),
@@ -112,58 +112,44 @@ class _SoloPlayScreenState extends ConsumerState<SoloPlayScreen> {
       backgroundColor: AppColors.ink,
       appBar: ArcadeAppBar(
         backgroundColor: AppColors.ink,
-        showBack: false,
+        leading: ArcadeIconButton(
+          icon: Icons.close,
+          semanticLabel: '그만두기',
+          onPressed: _quit,
+        ),
         trailing: [StatChip(label: '적중 $_correct', color: AppColors.sun)],
       ),
-      body: Stack(
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.page,
+          0,
+          AppSpacing.page,
+          AppSpacing.section * 2,
+        ),
         children: [
-          ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.page,
-              0,
-              AppSpacing.page,
-              AppSpacing.section * 2,
-            ),
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.subject.name,
-                      style: AppTextStyles.label.copyWith(
-                        color: AppColors.pink,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${_index + 1} / $total',
-                    style: AppTextStyles.titleM.copyWith(
-                      color: AppColors.paper,
-                    ),
-                  ),
-                ],
+              Expanded(
+                child: Text(
+                  widget.subject.name,
+                  style: AppTextStyles.label.copyWith(color: AppColors.pink),
+                ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              _Progress(done: _index, total: total),
-              const SizedBox(height: AppSpacing.section),
-              QuizQuestionView(
-                key: ValueKey(_card.id),
-                card: _card,
-                onAnswered: _onAnswered,
-                onNext: _next,
-                nextLabel: _index + 1 < total ? '다음 문제' : '결과 보기',
+              Text(
+                '${_index + 1} / $total',
+                style: AppTextStyles.titleM.copyWith(color: AppColors.paper),
               ),
             ],
           ),
-          // 닫기 버튼은 상단바 왼쪽 자리에 겹쳐 둔다 (뒤로가기 대신 확인을 거친다)
-          Positioned(
-            left: AppSpacing.page,
-            top: -ArcadeAppBar.height + AppSpacing.sm,
-            child: ArcadeIconButton(
-              icon: Icons.close,
-              semanticLabel: '그만두기',
-              onPressed: _quit,
-            ),
+          const SizedBox(height: AppSpacing.sm),
+          _Progress(done: _index, total: total),
+          const SizedBox(height: AppSpacing.section),
+          QuizQuestionView(
+            key: ValueKey(_card.id),
+            card: _card,
+            onAnswered: _onAnswered,
+            onNext: _next,
+            nextLabel: _index + 1 < total ? '다음 문제' : '결과 보기',
           ),
         ],
       ),
