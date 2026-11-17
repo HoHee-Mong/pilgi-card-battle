@@ -43,7 +43,7 @@ Future<List<StudySource>> showAddSourceSheet(
   return result ?? const [];
 }
 
-enum _PickKind { camera, gallery, pdf }
+enum _PickKind { camera, gallery, pdf, audio }
 
 enum _Step { pick, options, running }
 
@@ -114,6 +114,25 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
               kind: SourceKind.pdf,
               contentType: 'application/pdf',
             ),
+        ];
+      case _PickKind.audio:
+        final picked = await FilePicker.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: SourceRepository.audioExtensions,
+        );
+        if (picked.isEmpty) return const [];
+        final f = picked.first; // 녹음은 한 번에 하나
+        final mime = SourceRepository.audioMime(f.name);
+        if (mime == null) {
+          throw const SourceException('MP3·M4A·WAV 같은 녹음 파일을 골라 주세요.');
+        }
+        return [
+          SourceFile(
+            fileName: f.name,
+            bytes: await f.readAsBytes(),
+            kind: SourceKind.audio,
+            contentType: mime,
+          ),
         ];
     }
   }
@@ -240,6 +259,7 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
           source.id,
           SourceStatus.done,
           summary: result.summary.isEmpty ? null : result.summary,
+          transcript: result.transcript,
         );
         created.add(source.copyWith(status: SourceStatus.done));
       } on CardGenerationException catch (e) {
@@ -295,9 +315,12 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
           const SizedBox(height: AppSpacing.xs),
           Text(switch (_step) {
             _Step.pick =>
-              '필기 사진이나 강의자료 PDF를 고르면 AI가 요약하고 카드를 만들어요. 원본은 저장하지 않아요.',
+              '필기 사진·강의자료 PDF·강의 녹음을 고르면 AI가 요약하고 카드를 만들어요. 원본은 저장하지 않아요.',
             _Step.options => _filesLabel(),
-            _Step.running => '보통 10~30초 걸려요. 화면을 닫지 마세요.',
+            _Step.running =>
+              _files.any((f) => f.kind == SourceKind.audio)
+                  ? '녹음은 길이에 따라 1~3분 걸려요. 화면을 닫지 마세요.'
+                  : '보통 10~30초 걸려요. 화면을 닫지 마세요.',
           }, style: AppTextStyles.caption),
           const SizedBox(height: AppSpacing.sectionTight),
           switch (_step) {
@@ -347,6 +370,14 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
           subtitle: '강의자료 (15MB 이하)',
           color: AppColors.cyan,
           onTap: () => _onPick(_PickKind.pdf),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _Option(
+          icon: Icons.mic_none_outlined,
+          title: '강의 녹음 고르기',
+          subtitle: 'MP3·M4A·WAV, 15MB 이하 (약 30분). 시간별 전사도 남아요',
+          color: AppColors.sun,
+          onTap: () => _onPick(_PickKind.audio),
         ),
       ],
     );

@@ -21,7 +21,7 @@ class SourceFile {
   int get sizeBytes => bytes.length;
 
   /// 한 파일 최대 크기. Gemini inline 입력 한도(요청 전체 20MB)보다 작게 잡는다.
-  /// 녹음(P2)도 같은 제한 안에서 바로 보낸다.
+  /// 녹음도 같은 제한 안에서 바로 보낸다 (m4a 기준 대략 30분).
   static const maxSizeBytes = 15 * 1024 * 1024;
 
   /// 한 요청에 함께 보내는 파일(사진 여러 장) 합계 제한.
@@ -88,9 +88,36 @@ class SourceRepository {
         .set(source.toMap()..['createdAt'] = FieldValue.serverTimestamp());
   }
 
-  Future<void> updateStatus(String id, SourceStatus status, {String? summary}) {
-    return _col.doc(id).update({'status': status.name, 'summary': ?summary});
+  Future<void> updateStatus(
+    String id,
+    SourceStatus status, {
+    String? summary,
+    List<TranscriptLine> transcript = const [],
+  }) {
+    return _col.doc(id).update({
+      'status': status.name,
+      'summary': ?summary,
+      if (transcript.isNotEmpty)
+        'transcript': [for (final l in transcript) l.toMap()],
+    });
   }
+
+  /// 녹음 파일 확장자 → Gemini에 보낼 MIME. 모르는 확장자면 null.
+  static String? audioMime(String fileName) {
+    final dot = fileName.lastIndexOf('.');
+    final ext = dot < 0 ? '' : fileName.substring(dot + 1).toLowerCase();
+    return switch (ext) {
+      'mp3' => 'audio/mp3',
+      'm4a' || 'mp4' => 'audio/mp4',
+      'aac' => 'audio/aac',
+      'wav' => 'audio/wav',
+      'ogg' => 'audio/ogg',
+      'flac' => 'audio/flac',
+      _ => null,
+    };
+  }
+
+  static const audioExtensions = ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'flac'];
 
   /// 문서만 지운다. 카드는 그대로 남는다.
   Future<void> delete(StudySource source) => _col.doc(source.id).delete();

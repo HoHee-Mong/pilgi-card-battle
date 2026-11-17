@@ -13,7 +13,7 @@ import '../subjects/arcade_dialog.dart';
 import 'source_providers.dart';
 import 'source_tile.dart';
 
-/// 자료 하나: 상태, 요약, 만든 카드 검수로 이동.
+/// 자료 하나: 상태, 요약, (녹음이면) 시간별 전사, 만든 카드 검수로 이동.
 /// 원본을 저장하지 않으므로 "다시 뽑기"는 없다. 더 뽑으려면 자료를 다시 올린다.
 class SourceDetailScreen extends ConsumerWidget {
   const SourceDetailScreen({super.key, required this.sourceId});
@@ -120,6 +120,10 @@ class SourceDetailScreen extends ConsumerWidget {
                       : AppTextStyles.body,
                 ),
               ),
+              if (source.transcript.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.section),
+                TranscriptCard(lines: source.transcript),
+              ],
               const SizedBox(height: AppSpacing.section),
               if (cards.isNotEmpty)
                 ChunkyButton(
@@ -142,6 +146,71 @@ class SourceDetailScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// 녹음 시간별 전사. 길면 앞부분만 보이고 "전체 보기"로 펼친다.
+class TranscriptCard extends StatefulWidget {
+  const TranscriptCard({super.key, required this.lines});
+
+  final List<TranscriptLine> lines;
+
+  /// 접혀 있을 때 보이는 줄 수
+  static const foldedLines = 6;
+
+  @override
+  State<TranscriptCard> createState() => _TranscriptCardState();
+}
+
+class _TranscriptCardState extends State<TranscriptCard> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = widget.lines;
+    final foldable = lines.length > TranscriptCard.foldedLines;
+    final shown = _open || !foldable
+        ? lines
+        : lines.take(TranscriptCard.foldedLines).toList();
+    return ChunkyCard(
+      title: '강의 전사',
+      trailing: Text(
+        '${lines.length}문단 · ${lines.last.clock}',
+        style: AppTextStyles.caption,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final l in shown)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: AppSpacing.minTouch * 1.2,
+                    child: Text(
+                      l.clock,
+                      style: AppTextStyles.chip.copyWith(
+                        color: AppColors.grape,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Text(l.text, style: AppTextStyles.bodyS)),
+                ],
+              ),
+            ),
+          if (foldable)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => setState(() => _open = !_open),
+                child: Text(_open ? '접기' : '전체 보기 (${lines.length}문단)'),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

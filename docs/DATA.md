@@ -142,7 +142,7 @@ rooms/{roomId}/answers/{round_uid}       # (B)
 1일차 공통 세팅에서 A가 `QuizCard`·`Attempt`를 먼저 만들어 `main`에 올린다. B는 그 전까지 `QuizCard.sample()` 더미 데이터로 작업한다.
 
 ## AI 호출 (A 소유, `lib/core/ai/`)
-- `CardGenerator.fromImage(bytes)`, `fromPdf(bytes)`, `fromAudio(bytes)` → `List<QuizCard>`(draft) + `summary`
+- `CardGenerator.generate(files)` — 사진·PDF 여러 개 또는 녹음 하나 → 카드(draft) + `summary`. 녹음이면 `transcript`(초 단위 시각 + 문단)도 돌려주고, 카드 출처는 "23:41"처럼 근거 시각
 - Gemini에 JSON 스키마(responseSchema)를 넘겨 구조화된 출력만 받는다
 - 프롬프트는 `lib/core/ai/prompts.dart` 한 곳에서 관리
 - 제한값은 `lib/core/config.dart`: 최대 파일 20MB, 녹음 30분, 하루 생성 20회 (임시값)

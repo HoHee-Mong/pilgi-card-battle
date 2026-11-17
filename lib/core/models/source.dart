@@ -1,5 +1,38 @@
 import 'model_utils.dart';
 
+/// 녹음 전사 한 줄. [t]는 녹음 시작부터 초.
+class TranscriptLine {
+  const TranscriptLine({required this.t, required this.text});
+
+  final int t;
+  final String text;
+
+  /// "23:41" (1시간 넘으면 "1:02:03")
+  String get clock => formatSeconds(t);
+
+  factory TranscriptLine.fromMap(Map<String, dynamic> m) =>
+      TranscriptLine(t: readInt(m['t']), text: m['text'] as String? ?? '');
+
+  Map<String, dynamic> toMap() => {'t': t, 'text': text};
+}
+
+/// 초 → "23:41" / "1:02:03"
+String formatSeconds(int seconds) {
+  final s = seconds < 0 ? 0 : seconds;
+  final h = s ~/ 3600;
+  final m = (s % 3600) ~/ 60;
+  final sec = (s % 60).toString().padLeft(2, '0');
+  return h > 0 ? '$h:${m.toString().padLeft(2, '0')}:$sec' : '$m:$sec';
+}
+
+List<TranscriptLine> _readTranscript(Object? raw) {
+  if (raw is! List) return const [];
+  return [
+    for (final e in raw)
+      if (e is Map) TranscriptLine.fromMap(e.cast<String, dynamic>()),
+  ];
+}
+
 /// 업로드 원본 종류. Firestore에는 `name` 그대로 저장한다.
 enum SourceKind { image, pdf, audio }
 
@@ -11,7 +44,7 @@ enum SourceStatus { uploaded, processing, done, failed }
 ///
 /// Storage를 쓰지 않는다(Blaze 요금제 필요). 파일 바이트는 기기에서 바로 Gemini로 보내고,
 /// 여기에는 파일 이름·종류·주차·상태·요약만 남는다. 원본은 저장하지 않는다.
-/// `transcript`·`emphasis`(녹음, P2)는 그때 필드만 추가한다.
+/// 녹음이면 [transcript](시간별 전사)도 남는다. 녹음 파일 자체는 저장하지 않는다.
 class StudySource {
   const StudySource({
     required this.id,
@@ -22,6 +55,7 @@ class StudySource {
     required this.fileName,
     this.status = SourceStatus.processing,
     this.summary,
+    this.transcript = const [],
     required this.createdAt,
   });
 
@@ -38,6 +72,9 @@ class StudySource {
 
   /// AI 핵심 요약. 분석 전·실패면 null.
   final String? summary;
+
+  /// 녹음일 때 시간별 전사 (P2). 녹음이 아니면 빈 목록.
+  final List<TranscriptLine> transcript;
   final DateTime createdAt;
 
   bool get isProcessing => status == SourceStatus.processing;
@@ -61,6 +98,7 @@ class StudySource {
         SourceStatus.processing,
       ),
       summary: map['summary'] as String?,
+      transcript: _readTranscript(map['transcript']),
       createdAt: readDate(map['createdAt']),
     );
   }
@@ -74,6 +112,8 @@ class StudySource {
       'fileName': fileName,
       'status': status.name,
       'summary': summary,
+      if (transcript.isNotEmpty)
+        'transcript': [for (final l in transcript) l.toMap()],
       'createdAt': writeDate(createdAt),
     };
   }
@@ -88,6 +128,7 @@ class StudySource {
       fileName: fileName,
       status: status ?? this.status,
       summary: summary ?? this.summary,
+      transcript: transcript,
       createdAt: createdAt,
     );
   }
