@@ -45,11 +45,14 @@ class StatChip extends StatelessWidget {
             Icon(icon, size: 18, color: fg),
             const SizedBox(width: AppSpacing.xs),
           ],
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.chip.copyWith(color: fg),
+          // Flexible: 부모 폭이 좁으면 글자가 넘치지 않고 "…"로 줄어든다.
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.chip.copyWith(color: fg),
+            ),
           ),
         ],
       ),
