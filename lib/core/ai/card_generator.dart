@@ -53,7 +53,7 @@ class CardGenerateOptions {
   final int count;
   final Set<CardType> types;
 
-  static const counts = [5, 10, 15];
+  static const counts = [5, 10, 15, 20, 30];
 }
 
 class CardGenerationException implements Exception {
