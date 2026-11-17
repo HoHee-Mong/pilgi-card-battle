@@ -9,6 +9,7 @@ import '../../core/widgets/chunky_button.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../cards/card_providers.dart';
 import '../subjects/arcade_app_bar.dart';
+import 'favorite_button.dart';
 import 'solo_model.dart';
 import 'solo_play_screen.dart';
 import 'solo_providers.dart';
@@ -29,6 +30,7 @@ class _SoloSetupScreenState extends ConsumerState<SoloSetupScreen> {
   final Set<CardType> _types = {...CardType.values};
   int _count = 10;
   bool _includeDrafts = false;
+  bool _favoritesOnly = false;
 
   /// 풀이·결과는 하단 탭 없이 전체 화면으로 띄운다. 결과에서 "끝내기"면 과목 화면으로 돌아간다.
   Future<void> _start(List<QuizCard> cards) async {
@@ -48,7 +50,11 @@ class _SoloSetupScreenState extends ConsumerState<SoloSetupScreen> {
     final all =
         ref.watch(myCardsProvider((subjectId: subject.id, week: null))).value ??
         const <QuizCard>[];
-    final pool = _includeDrafts ? all : all.where((c) => c.isVerified).toList();
+    final favorites = ref.watch(favoriteIdsProvider);
+    final pool = all
+        .where((c) => _includeDrafts || c.isVerified)
+        .where((c) => !_favoritesOnly || favorites.contains(c.id))
+        .toList();
     final lastSolved = lastSolvedAt(
       ref.watch(subjectAttemptsProvider(subject.id)).value ?? const [],
     );
@@ -166,10 +172,21 @@ class _SoloSetupScreenState extends ConsumerState<SoloSetupScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.section),
-          FilterChip(
-            label: const Text('초안도 포함 (검수 전 카드)'),
-            selected: _includeDrafts,
-            onSelected: (on) => setState(() => _includeDrafts = on),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              FilterChip(
+                label: const Text('초안도 포함 (검수 전 카드)'),
+                selected: _includeDrafts,
+                onSelected: (on) => setState(() => _includeDrafts = on),
+              ),
+              FilterChip(
+                label: Text('★ 즐겨찾기만 (${favorites.length})'),
+                selected: _favoritesOnly,
+                onSelected: (on) => setState(() => _favoritesOnly = on),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.section),
           Text(

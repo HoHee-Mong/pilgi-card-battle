@@ -10,6 +10,7 @@ import '../../core/widgets/chunky_button.dart';
 import '../cards/card_providers.dart';
 import '../notebook/notebook_screen.dart';
 import '../solo/solo_setup_screen.dart';
+import '../solo/weak_concepts_card.dart';
 import '../solo/wrong_note_providers.dart';
 import '../solo/wrong_note_screen.dart';
 import 'arcade_app_bar.dart';
@@ -163,6 +164,8 @@ class SubjectDetailScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.section),
+              WeakConceptsCard(subject: subject),
               const SizedBox(height: AppSpacing.section),
               const ArcadeSectionHeader(title: '주차 선택'),
               const SizedBox(height: AppSpacing.xs),

@@ -12,14 +12,20 @@ enum NotebookScope {
   room,
 }
 
-/// 내 카드 검수 상태 필터.
-enum NotebookStatus { all, verified, draft }
+/// 내 카드 필터: 검수 상태 또는 즐겨찾기.
+enum NotebookStatus { all, verified, draft, favorite }
 
 /// 방 카드 한 장: 카드 본문 + 문제은행 항목(투표) + 그 방.
 typedef RoomCard = ({QuizCard card, BankEntry entry, Room room});
 
-List<QuizCard> filterByStatus(List<QuizCard> cards, NotebookStatus status) {
+List<QuizCard> filterByStatus(
+  List<QuizCard> cards,
+  NotebookStatus status, {
+  Set<String> favorites = const {},
+}) {
   return switch (status) {
+    NotebookStatus.favorite =>
+      cards.where((c) => favorites.contains(c.id)).toList(),
     NotebookStatus.all => cards,
     NotebookStatus.verified => cards.where((c) => c.isVerified).toList(),
     NotebookStatus.draft => cards.where((c) => !c.isVerified).toList(),
