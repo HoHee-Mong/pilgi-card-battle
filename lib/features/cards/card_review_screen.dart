@@ -10,6 +10,7 @@ import '../subjects/arcade_dialog.dart';
 import 'card_edit_screen.dart';
 import 'card_list_tile.dart';
 import 'card_providers.dart';
+import 'card_xp.dart';
 import 'card_similarity.dart';
 
 /// 자료 하나로 만든 카드 검수 목록. 초안이 위로 온다.
@@ -40,6 +41,7 @@ class CardReviewScreen extends ConsumerWidget {
     for (final c in drafts) {
       await repo.setStatus(c.id, CardStatus.verified);
     }
+    await recordCardsCreated(ref, drafts.length);
   }
 
   @override
