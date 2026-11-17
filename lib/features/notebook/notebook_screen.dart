@@ -11,6 +11,7 @@ import '../../core/widgets/vote_button.dart';
 import '../cards/card_edit_screen.dart';
 import '../cards/card_list_tile.dart';
 import '../cards/card_providers.dart';
+import '../solo/favorite_button.dart';
 import '../sources/source_detail_screen.dart';
 import '../sources/source_tile.dart';
 import '../subjects/arcade_app_bar.dart';
@@ -135,6 +136,7 @@ class _StatusChips extends StatelessWidget {
           (NotebookStatus.all, '전체'),
           (NotebookStatus.verified, '검수 완료'),
           (NotebookStatus.draft, '초안'),
+          (NotebookStatus.favorite, '★ 즐겨찾기'),
         ])
           ChoiceChip(
             label: Text(label),
@@ -171,12 +173,16 @@ class _MineBody extends ConsumerWidget {
       ),
       error: (e, _) => ArcadeEmpty(message: '카드를 불러오지 못했어요\n$e'),
       data: (all) {
-        final cards = filterByStatus(all, status);
+        final cards = filterByStatus(
+          all,
+          status,
+          favorites: ref.watch(favoriteIdsProvider),
+        );
         final verified = all.where((c) => c.isVerified).length;
-        // 카드는 없어도 자료 요약이 있는 주차는 보여 준다.
+        // 카드는 없어도 자료 요약이 있는 주차는 보여 준다 (즐겨찾기 필터일 땐 카드 있는 주차만).
         final weeks = {
           ...groupByWeek(cards, (c) => c.week).keys,
-          ...sourcesByWeek.keys,
+          if (status != NotebookStatus.favorite) ...sourcesByWeek.keys,
         }.toList()..sort();
         final byWeek = groupByWeek(cards, (c) => c.week);
         return Column(
@@ -197,8 +203,10 @@ class _MineBody extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.section),
             if (weeks.isEmpty)
-              const ArcadeEmpty(
-                message: '아직 카드가 없어요.\n주차 화면에서 필기를 찍거나 직접 써 보세요.',
+              ArcadeEmpty(
+                message: status == NotebookStatus.favorite
+                    ? '즐겨찾기한 카드가 없어요.\n카드 오른쪽 별을 눌러 모아 보세요.'
+                    : '아직 카드가 없어요.\n주차 화면에서 필기를 찍거나 직접 써 보세요.',
               ),
             for (final week in weeks) ...[
               _WeekSection(
@@ -214,6 +222,7 @@ class _MineBody extends ConsumerWidget {
                           builder: (_) => CardEditScreen.edit(card: c),
                         ),
                       ),
+                      trailing: FavoriteButton(cardId: c.id),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                   ],
