@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/ai/card_generator.dart';
 import '../../core/auth/auth_providers.dart';
 import '../../core/auth/user_profile.dart';
+import '../../core/config.dart';
 import '../../core/models/card.dart';
 import '../../core/models/source.dart';
 import '../../core/theme/tokens.dart';
@@ -43,7 +44,7 @@ Future<List<StudySource>> showAddSourceSheet(
   return result ?? const [];
 }
 
-enum _PickKind { camera, gallery, pdf }
+enum _PickKind { camera, gallery, pdf, audio }
 
 enum _Step { pick, options, running }
 
@@ -115,6 +116,20 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
               contentType: 'application/pdf',
             ),
         ];
+      case _PickKind.audio:
+        final picked = await FilePicker.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: const ['mp3', 'm4a', 'wav', 'aac', 'ogg', 'flac'],
+        );
+        return [
+          for (final f in picked)
+            SourceFile(
+              fileName: f.name,
+              bytes: await f.readAsBytes(),
+              kind: SourceKind.audio,
+              contentType: audioMime(f.name),
+            ),
+        ];
     }
   }
 
@@ -178,6 +193,23 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
     final groups = _groups();
     final created = <StudySource>[];
 
+    // 하루 분석 횟수 제한 (AI 비용). 자료 하나 = 1회.
+    try {
+      final used = await sources.countToday(uid);
+      if (used + groups.length > AppLimits.dailyGenerations) {
+        final left = AppLimits.dailyGenerations - used;
+        _toast(
+          left <= 0
+              ? '오늘은 AI 분석을 ${AppLimits.dailyGenerations}번 다 썼어요. 내일 다시 해 주세요.'
+              : '오늘 남은 AI 분석은 $left번이에요. 파일을 줄여서 다시 골라 주세요.',
+        );
+        return;
+      }
+    } catch (_) {
+      // 횟수를 못 읽으면 막지 않는다 (네트워크 문제로 기능 전체가 막히지 않게).
+    }
+    if (!mounted) return;
+
     setState(() {
       _step = _Step.running;
       _stage = '준비 중';
@@ -200,7 +232,13 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
       );
       try {
         await sources.create(source);
-        if (mounted) setState(() => _stage = 'AI가 문제 만드는 중$progress');
+        if (mounted) {
+          setState(
+            () => _stage = source.kind == SourceKind.audio
+                ? 'AI가 강의를 듣고 문제 만드는 중$progress'
+                : 'AI가 문제 만드는 중$progress',
+          );
+        }
         final result = await generator.generate(
           files: [
             for (final f in group)
@@ -240,6 +278,8 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
           source.id,
           SourceStatus.done,
           summary: result.summary.isEmpty ? null : result.summary,
+          transcript: result.transcript,
+          emphasis: result.emphasis,
         );
         created.add(source.copyWith(status: SourceStatus.done));
       } on CardGenerationException catch (e) {
@@ -295,9 +335,12 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
           const SizedBox(height: AppSpacing.xs),
           Text(switch (_step) {
             _Step.pick =>
-              '필기 사진이나 강의자료 PDF를 고르면 AI가 요약하고 카드를 만들어요. 원본은 저장하지 않아요.',
+              '필기 사진, 강의자료 PDF, 강의 녹음을 고르면 AI가 요약하고 카드를 만들어요. 원본은 저장하지 않아요.',
             _Step.options => _filesLabel(),
-            _Step.running => '보통 10~30초 걸려요. 화면을 닫지 마세요.',
+            _Step.running =>
+              _files.any((f) => f.kind == SourceKind.audio)
+                  ? '녹음은 1~3분 걸릴 수 있어요. 화면을 닫지 마세요.'
+                  : '보통 10~30초 걸려요. 화면을 닫지 마세요.',
           }, style: AppTextStyles.caption),
           const SizedBox(height: AppSpacing.sectionTight),
           switch (_step) {
@@ -347,6 +390,15 @@ class _AddSourceSheetState extends ConsumerState<_AddSourceSheet> {
           subtitle: '강의자료 (15MB 이하)',
           color: AppColors.cyan,
           onTap: () => _onPick(_PickKind.pdf),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _Option(
+          icon: Icons.mic_none_rounded,
+          title: '강의 녹음 고르기',
+          subtitle:
+              'MP3·M4A·WAV (15MB 이하, 약 ${AppLimits.maxAudioMinutes}분) · 전사·강조 발언까지',
+          color: AppColors.sun,
+          onTap: () => _onPick(_PickKind.audio),
         ),
       ],
     );
@@ -490,4 +542,17 @@ class _Option extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 녹음 파일 확장자 → Gemini에 보내는 MIME 종류.
+String audioMime(String fileName) {
+  final ext = fileName.toLowerCase().split('.').last;
+  return switch (ext) {
+    'mp3' => 'audio/mp3',
+    'wav' => 'audio/wav',
+    'aac' => 'audio/aac',
+    'ogg' => 'audio/ogg',
+    'flac' => 'audio/flac',
+    _ => 'audio/mp4', // m4a
+  };
 }

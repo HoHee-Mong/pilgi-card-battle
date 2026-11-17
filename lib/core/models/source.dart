@@ -11,7 +11,7 @@ enum SourceStatus { uploaded, processing, done, failed }
 ///
 /// Storage를 쓰지 않는다(Blaze 요금제 필요). 파일 바이트는 기기에서 바로 Gemini로 보내고,
 /// 여기에는 파일 이름·종류·주차·상태·요약만 남는다. 원본은 저장하지 않는다.
-/// `transcript`·`emphasis`(녹음, P2)는 그때 필드만 추가한다.
+/// 녹음이면 [transcript](시간별 전사)와 [emphasis](교수님 강조 발언)도 남는다 (P2).
 class StudySource {
   const StudySource({
     required this.id,
@@ -22,6 +22,8 @@ class StudySource {
     required this.fileName,
     this.status = SourceStatus.processing,
     this.summary,
+    this.transcript = const [],
+    this.emphasis = const [],
     required this.createdAt,
   });
 
@@ -38,6 +40,12 @@ class StudySource {
 
   /// AI 핵심 요약. 분석 전·실패면 null.
   final String? summary;
+
+  /// 녹음 전사 (시간순). 녹음이 아니면 빈 목록.
+  final List<TranscriptLine> transcript;
+
+  /// 전사본에서 찾은 교수님 직접 강조 발언 ("시험에 나온다" 등). 시간순.
+  final List<EmphasisLine> emphasis;
   final DateTime createdAt;
 
   bool get isProcessing => status == SourceStatus.processing;
@@ -61,6 +69,16 @@ class StudySource {
         SourceStatus.processing,
       ),
       summary: map['summary'] as String?,
+      transcript: [
+        if (map['transcript'] is List)
+          for (final m in map['transcript'] as List)
+            if (m is Map) TranscriptLine.fromMap(m.cast<String, dynamic>()),
+      ],
+      emphasis: [
+        if (map['emphasis'] is List)
+          for (final m in map['emphasis'] as List)
+            if (m is Map) EmphasisLine.fromMap(m.cast<String, dynamic>()),
+      ],
       createdAt: readDate(map['createdAt']),
     );
   }
@@ -74,11 +92,20 @@ class StudySource {
       'fileName': fileName,
       'status': status.name,
       'summary': summary,
+      if (transcript.isNotEmpty)
+        'transcript': [for (final l in transcript) l.toMap()],
+      if (emphasis.isNotEmpty)
+        'emphasis': [for (final e in emphasis) e.toMap()],
       'createdAt': writeDate(createdAt),
     };
   }
 
-  StudySource copyWith({SourceStatus? status, String? summary}) {
+  StudySource copyWith({
+    SourceStatus? status,
+    String? summary,
+    List<TranscriptLine>? transcript,
+    List<EmphasisLine>? emphasis,
+  }) {
     return StudySource(
       id: id,
       ownerId: ownerId,
@@ -88,7 +115,64 @@ class StudySource {
       fileName: fileName,
       status: status ?? this.status,
       summary: summary ?? this.summary,
+      transcript: transcript ?? this.transcript,
+      emphasis: emphasis ?? this.emphasis,
       createdAt: createdAt,
     );
   }
+}
+
+/// 전사 한 줄. [t]는 녹음 시작부터 초.
+class TranscriptLine {
+  const TranscriptLine({required this.t, required this.text});
+
+  final int t;
+  final String text;
+
+  factory TranscriptLine.fromMap(Map<String, dynamic> map) =>
+      TranscriptLine(t: readInt(map['t']), text: map['text'] as String? ?? '');
+
+  Map<String, dynamic> toMap() => {'t': t, 'text': text};
+}
+
+/// 교수님 강조 발언 하나. [concept]는 관련 개념 태그(카드 concept와 맞춘다, 없으면 빈 문자열).
+class EmphasisLine {
+  const EmphasisLine({required this.t, required this.quote, this.concept = ''});
+
+  final int t;
+  final String quote;
+  final String concept;
+
+  factory EmphasisLine.fromMap(Map<String, dynamic> map) => EmphasisLine(
+    t: readInt(map['t']),
+    quote: map['quote'] as String? ?? '',
+    concept: map['concept'] as String? ?? '',
+  );
+
+  Map<String, dynamic> toMap() => {'t': t, 'quote': quote, 'concept': concept};
+}
+
+/// 초 → "12:34" (1시간 넘으면 "1:02:03").
+String formatTimestamp(int seconds) {
+  final s = seconds < 0 ? 0 : seconds;
+  final h = s ~/ 3600;
+  final m = (s % 3600) ~/ 60;
+  final sec = (s % 60).toString().padLeft(2, '0');
+  if (h > 0) return '$h:${m.toString().padLeft(2, '0')}:$sec';
+  return '$m:$sec';
+}
+
+/// "12:34" / "1:02:03" / "754" → 초. 못 읽으면 null.
+int? parseTimestamp(String raw) {
+  final t = raw.trim();
+  if (t.isEmpty) return null;
+  final parts = t.split(':');
+  if (parts.length > 3) return null;
+  var total = 0;
+  for (final p in parts) {
+    final n = int.tryParse(p.trim());
+    if (n == null || n < 0) return null;
+    total = total * 60 + n;
+  }
+  return total;
 }

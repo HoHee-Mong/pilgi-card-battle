@@ -55,7 +55,7 @@ sources/{sourceId}                       # 업로드 원본 (A), 항상 비공�
   status: "processing" | "done" | "failed"   # ("uploaded"는 옛 값, 읽기만 호환)
   summary: string?                       # 핵심 요약
   transcript: [{ t: int(초), text }]?    # 녹음일 때 (P2). 녹음 파일도 저장하지 않고 15MB 안에서 바로 Gemini로 보낸다
-  emphasis: [{ t: int(초), quote }]?     # 교수님 강조 발언 (P2)
+  emphasis: [{ t: int(초), quote, concept }]?  # 교수님 강조 발언 (P2). concept는 관련 카드 개념 태그(없으면 빈 문자열)
   createdAt: timestamp
 
 cards/{cardId}                           # (A가 생성, B는 읽기 + visibility/roomIds 갱신)
@@ -145,7 +145,8 @@ rooms/{roomId}/answers/{round_uid}       # (B)
 - `CardGenerator.fromImage(bytes)`, `fromPdf(bytes)`, `fromAudio(bytes)` → `List<QuizCard>`(draft) + `summary`
 - Gemini에 JSON 스키마(responseSchema)를 넘겨 구조화된 출력만 받는다
 - 프롬프트는 `lib/core/ai/prompts.dart` 한 곳에서 관리
-- 제한값은 `lib/core/config.dart`: 최대 파일 20MB, 녹음 30분, 하루 생성 20회 (임시값)
+- 제한값은 `lib/core/config.dart`(`AppLimits`): 하루 분석 20회, 녹음 약 30분(실제로는 파일 15MB로 막음), 전사 최대 120줄. 파일 크기는 `SourceFile.maxSizeBytes`(15MB)
+- 녹음은 `CardGenerator.generate`에 오디오 파일을 넘기면 자동으로 녹음 모드(전사·강조 발언 포함 스키마)로 호출한다
 
 ## 점수 규칙 (B)
 - 정답: `500 + 남은시간비율 * 500` (최대 1000), 오답 0
