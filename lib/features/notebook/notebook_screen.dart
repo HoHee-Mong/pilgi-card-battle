@@ -14,6 +14,8 @@ import '../cards/card_providers.dart';
 import '../sources/source_detail_screen.dart';
 import '../sources/source_tile.dart';
 import '../subjects/arcade_app_bar.dart';
+import '../../core/widgets/chunky_button.dart';
+import 'notebook_export_sheet.dart';
 import 'notebook_model.dart';
 import 'notebook_providers.dart';
 import 'room_card_sheet.dart';
@@ -54,6 +56,13 @@ class _NotebookScreenState extends ConsumerState<NotebookScreen> {
         ),
         children: [
           const ArcadeTitle(title: '족보 노트', subtitle: '주차별 카드와 핵심 요약, 출처'),
+          const SizedBox(height: AppSpacing.md),
+          ChunkyButton(
+            label: '족보 내보내기 (PDF·텍스트)',
+            icon: Icons.ios_share_rounded,
+            color: AppColors.sun,
+            onPressed: () => showNotebookExportSheet(context, subject),
+          ),
           const SizedBox(height: AppSpacing.section),
           _ScopeChips(
             value: _scope,
