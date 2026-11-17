@@ -105,6 +105,12 @@ class _MockExamPlayScreenState extends ConsumerState<MockExamPlayScreen> {
     final left = _deadline.difference(DateTime.now()).inSeconds;
     if (left <= 0) {
       setState(() => _left = 0);
+      // 제출 확인 창·문제 번호판이 열려 있으면 먼저 닫는다. 안 닫으면 결과 화면에서 돌아올 때
+      // pop이 이 화면 대신 남아 있던 창을 닫아 버린다.
+      final route = ModalRoute.of(context);
+      if (route != null && !route.isCurrent) {
+        Navigator.of(context).popUntil((r) => r == route);
+      }
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('시간 끝! 자동으로 제출했어요.')));
       _submit();
@@ -141,7 +147,7 @@ class _MockExamPlayScreenState extends ConsumerState<MockExamPlayScreen> {
       cancelLabel: '더 풀기',
       confirmColor: AppColors.lime,
     );
-    if (ok && mounted) _submit();
+    if (ok && mounted && _phase == _Phase.exam) _submit();
   }
 
   /// 채점하고 저장을 시작한 뒤 채점 연출로 넘어간다.
@@ -276,7 +282,8 @@ class _MockExamPlayScreenState extends ConsumerState<MockExamPlayScreen> {
       cancelLabel: '계속 풀기',
       confirmColor: AppColors.wrong,
     );
-    if (ok && mounted) Navigator.of(context).pop();
+    // 창이 열린 사이 시간이 끝나 자동 제출됐으면 그만두지 않는다.
+    if (ok && mounted && _phase == _Phase.exam) Navigator.of(context).pop();
   }
 
   Future<void> _openSheet() async {
@@ -293,7 +300,7 @@ class _MockExamPlayScreenState extends ConsumerState<MockExamPlayScreen> {
         },
       ),
     );
-    if (!mounted || picked == null) return;
+    if (!mounted || picked == null || _phase != _Phase.exam) return;
     if (picked < 0) {
       _confirmSubmit();
     } else {
