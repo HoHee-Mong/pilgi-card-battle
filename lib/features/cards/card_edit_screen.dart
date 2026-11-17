@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +14,7 @@ import '../../core/widgets/stat_chip.dart';
 import '../subjects/arcade_app_bar.dart';
 import '../subjects/arcade_dialog.dart';
 import 'card_providers.dart';
+import 'card_xp.dart';
 import 'card_similarity.dart';
 import 'share_to_room_sheet.dart';
 
@@ -189,6 +192,9 @@ class _CardEditScreenState extends ConsumerState<CardEditScreen> {
             updatedAt: now,
           ),
         );
+      }
+      if (becameVerified(widget.card?.status, status)) {
+        unawaited(recordCardsCreated(ref, 1));
       }
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
