@@ -1,13 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/bank/bank_tab.dart';
+import '../features/mock_exam/mock_exam_tab.dart';
 import '../features/notebook/notebook_share_screen.dart';
 import '../features/room/lobby_screen.dart';
 import '../features/subjects/subject_list_screen.dart';
 import 'auth/auth_service.dart';
 import 'auth/login_screen.dart';
-import 'theme/tokens.dart';
 import 'widgets/app_shell.dart';
 
 /// 앱 경로. 새 화면 경로 추가는 각자 한 줄씩 가능 (`docs/ROLES.md`).
@@ -60,10 +59,9 @@ final appRouter = GoRouter(
         ),
         StatefulShellBranch(
           routes: [
-            // A의 모의고사 화면이 생기면 이 줄만 바꾼다.
             GoRoute(
               path: AppRoutes.mock,
-              builder: (_, _) => const _ComingSoon('모의고사는 곧 열려요'),
+              builder: (_, _) => const MockExamTab(),
             ),
           ],
         ),
@@ -79,25 +77,6 @@ final appRouter = GoRouter(
     ),
   ],
 );
-
-/// 아직 없는 탭 자리 표시
-class _ComingSoon extends StatelessWidget {
-  const _ComingSoon(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.ink,
-      body: Center(
-        child: Text(
-          text,
-          style: AppTextStyles.heading.copyWith(color: AppColors.paper),
-        ),
-      ),
-    );
-  }
-}
 
 /// 로그인 여부에 따른 화면 이동. null이면 그대로.
 /// 공유 족보 링크로 들어왔는데 로그인 전이면, 로그인한 뒤 그 링크로 돌아간다 ([next]).
