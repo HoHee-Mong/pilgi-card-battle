@@ -8,12 +8,14 @@ import '../../core/widgets/chunky_card.dart';
 import '../../core/widgets/stat_chip.dart';
 import '../cards/card_providers.dart';
 import '../cards/card_review_screen.dart';
+import '../notebook/notebook_providers.dart';
 import '../subjects/arcade_app_bar.dart';
 import '../subjects/arcade_dialog.dart';
+import 'concept_signals.dart';
 import 'source_providers.dart';
 import 'source_tile.dart';
 
-/// 자료 하나: 상태, 요약, 만든 카드 검수로 이동.
+/// 자료 하나: 상태, 요약, (녹음) 교수님 강조 발언·전사본, 중요 개념 근거, 만든 카드 검수로 이동.
 /// 원본을 저장하지 않으므로 "다시 뽑기"는 없다. 더 뽑으려면 자료를 다시 올린다.
 class SourceDetailScreen extends ConsumerWidget {
   const SourceDetailScreen({super.key, required this.sourceId});
@@ -120,6 +122,32 @@ class SourceDetailScreen extends ConsumerWidget {
                       : AppTextStyles.body,
                 ),
               ),
+              if (source.emphasis.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.section),
+                _EmphasisCard(lines: source.emphasis),
+              ],
+              if (cards.isNotEmpty || source.emphasis.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.section),
+                _ConceptCard(
+                  signals: buildConceptSignals(
+                    cards: cards,
+                    emphasis: source.emphasis,
+                    votesByCardId: {
+                      for (final rc
+                          in ref
+                                  .watch(roomCardsProvider(source.subjectId))
+                                  .value ??
+                              const [])
+                        rc.card.id: rc.entry.voteCount,
+                    },
+                  ),
+                  isAudio: source.kind == SourceKind.audio,
+                ),
+              ],
+              if (source.transcript.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.section),
+                _TranscriptCard(lines: source.transcript),
+              ],
               const SizedBox(height: AppSpacing.section),
               if (cards.isNotEmpty)
                 ChunkyButton(
@@ -142,6 +170,163 @@ class SourceDetailScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// 교수님이 실제로 한 강조 발언 (녹음 시간과 함께).
+class _EmphasisCard extends StatelessWidget {
+  const _EmphasisCard({required this.lines});
+
+  final List<EmphasisLine> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChunkyCard(
+      title: '교수님 강조 발언',
+      color: AppColors.sun,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final e in lines) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                StatChip(label: formatTimestamp(e.t), color: AppColors.paper),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('“${e.quote}”', style: AppTextStyles.body),
+                      if (e.concept.isNotEmpty)
+                        Text(e.concept, style: AppTextStyles.caption),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          Text(
+            '녹음에서 교수님이 직접 말한 부분만 모았어요. 잘못 들었을 수 있으니 시간으로 확인해 보세요.',
+            style: AppTextStyles.caption.copyWith(color: AppColors.ink),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 개념별 근거: AI 추정 / 교수님 실제 발언 / 친구 투표를 서로 다른 색으로 구분한다.
+class _ConceptCard extends StatelessWidget {
+  const _ConceptCard({required this.signals, required this.isAudio});
+
+  final List<ConceptSignal> signals;
+  final bool isAudio;
+
+  @override
+  Widget build(BuildContext context) {
+    if (signals.isEmpty) return const SizedBox.shrink();
+    return ChunkyCard(
+      title: '중요 개념',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: [
+              const StatChip(label: 'AI 추정', color: AppColors.paper),
+              if (isAudio)
+                const StatChip(label: '교수님 발언', color: AppColors.sun),
+              const StatChip(label: '친구 투표', color: AppColors.lime),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          for (final s in signals.take(8)) ...[
+            Text(s.concept, style: AppTextStyles.heading),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: [
+                if (s.cardCount > 0)
+                  StatChip(
+                    label: 'AI 카드 ${s.cardCount}',
+                    color: AppColors.paper,
+                    border: false,
+                  ),
+                for (final q in s.quotes.take(3))
+                  StatChip(
+                    label: '교수님 ${formatTimestamp(q.t)}',
+                    icon: Icons.record_voice_over_outlined,
+                    color: AppColors.sun,
+                    border: false,
+                  ),
+                if (s.votes > 0)
+                  StatChip(
+                    label: '친구 ${s.votes}표',
+                    icon: Icons.how_to_vote_outlined,
+                    color: AppColors.lime,
+                    border: false,
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          const Text(
+            'AI 추정은 AI가 문제로 만든 개념, 교수님 발언은 녹음 속 실제 말, 친구 투표는 방에서 받은 "나올 것 같아요" 수예요. 출제 보장은 아니에요.',
+            style: AppTextStyles.caption,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 녹음 전사본 (접어 두고 펼쳐 본다).
+class _TranscriptCard extends StatelessWidget {
+  const _TranscriptCard({required this.lines});
+
+  final List<TranscriptLine> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChunkyCard(
+      padding: EdgeInsets.zero,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          title: Text('전사본 · ${lines.length}줄', style: AppTextStyles.heading),
+          subtitle: const Text('강의 핵심 구간을 시간별로', style: AppTextStyles.caption),
+          childrenPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          children: [
+            for (final l in lines)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 56,
+                      child: Text(
+                        formatTimestamp(l.t),
+                        style: AppTextStyles.label,
+                      ),
+                    ),
+                    Expanded(child: Text(l.text, style: AppTextStyles.bodyS)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

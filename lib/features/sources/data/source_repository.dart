@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../core/models/model_utils.dart';
 import '../../../core/models/source.dart';
 
 /// 기기에서 고른 파일 하나. 저장하지 않고 바로 Gemini로 보낸다.
@@ -21,7 +22,7 @@ class SourceFile {
   int get sizeBytes => bytes.length;
 
   /// 한 파일 최대 크기. Gemini inline 입력 한도(요청 전체 20MB)보다 작게 잡는다.
-  /// 녹음(P2)도 같은 제한 안에서 바로 보낸다.
+  /// 녹음도 같은 제한 안에서 바로 보낸다 (mp3 128kbps 기준 약 15분, m4a 64kbps 기준 약 30분).
   static const maxSizeBytes = 15 * 1024 * 1024;
 
   /// 한 요청에 함께 보내는 파일(사진 여러 장) 합계 제한.
@@ -88,8 +89,33 @@ class SourceRepository {
         .set(source.toMap()..['createdAt'] = FieldValue.serverTimestamp());
   }
 
-  Future<void> updateStatus(String id, SourceStatus status, {String? summary}) {
-    return _col.doc(id).update({'status': status.name, 'summary': ?summary});
+  Future<void> updateStatus(
+    String id,
+    SourceStatus status, {
+    String? summary,
+    List<TranscriptLine> transcript = const [],
+    List<EmphasisLine> emphasis = const [],
+  }) {
+    return _col.doc(id).update({
+      'status': status.name,
+      'summary': ?summary,
+      if (transcript.isNotEmpty)
+        'transcript': [for (final l in transcript) l.toMap()],
+      if (emphasis.isNotEmpty)
+        'emphasis': [for (final e in emphasis) e.toMap()],
+    });
+  }
+
+  /// 오늘(기기 시간 0시부터) 내가 AI로 분석한 자료 수. 하루 제한 확인용.
+  /// 복합 색인을 피하려고 ownerId 등호 조건만 쓰고 날짜는 앱에서 거른다.
+  Future<int> countToday(String uid) async {
+    final snap = await _col.where('ownerId', isEqualTo: uid).get();
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    return snap.docs
+        .map((d) => readDateOrNull(d.data()['createdAt']))
+        .where((at) => at != null && !at.isBefore(start))
+        .length;
   }
 
   /// 문서만 지운다. 카드는 그대로 남는다.
