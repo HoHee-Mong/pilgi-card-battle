@@ -104,7 +104,7 @@ class _QuizQuestionViewState extends State<QuizQuestionView> {
         ...switch (card.type) {
           CardType.mcq => [
             for (final (i, choice) in card.choices.indexed) ...[
-              _ChoiceBlock(
+              QuizChoiceBlock(
                 letter: String.fromCharCode(65 + i),
                 text: choice,
                 state: _stateFor(choice),
@@ -118,7 +118,7 @@ class _QuizQuestionViewState extends State<QuizQuestionView> {
               children: [
                 for (final v in const ['O', 'X']) ...[
                   Expanded(
-                    child: _ChoiceBlock(
+                    child: QuizChoiceBlock(
                       letter: v,
                       text: v == 'O' ? '맞다' : '틀리다',
                       state: _stateFor(v),
@@ -151,17 +151,17 @@ class _QuizQuestionViewState extends State<QuizQuestionView> {
                 },
               ),
             ] else ...[
-              _ChoiceBlock(
+              QuizChoiceBlock(
                 letter: '답',
                 text: card.answer,
-                state: _ChoiceState.correct,
+                state: QuizChoiceState.correct,
               ),
               if (!_correct) ...[
                 const SizedBox(height: AppSpacing.sm),
-                _ChoiceBlock(
+                QuizChoiceBlock(
                   letter: '나',
                   text: _answer!,
-                  state: _ChoiceState.wrong,
+                  state: QuizChoiceState.wrong,
                 ),
               ],
             ],
@@ -216,21 +216,23 @@ class _QuizQuestionViewState extends State<QuizQuestionView> {
     );
   }
 
-  _ChoiceState _stateFor(String choice) {
+  QuizChoiceState _stateFor(String choice) {
     if (!_revealed || !widget.instantFeedback) {
-      return _answer == choice ? _ChoiceState.picked : _ChoiceState.idle;
+      return _answer == choice ? QuizChoiceState.picked : QuizChoiceState.idle;
     }
-    if (choice == widget.card.answer) return _ChoiceState.correct;
-    if (choice == _answer) return _ChoiceState.wrong;
-    return _ChoiceState.dim;
+    if (choice == widget.card.answer) return QuizChoiceState.correct;
+    if (choice == _answer) return QuizChoiceState.wrong;
+    return QuizChoiceState.dim;
   }
 }
 
-enum _ChoiceState { idle, picked, correct, wrong, dim }
+/// 보기 블록 상태. [picked]는 채점 전 "내가 고른 답"(모의고사).
+enum QuizChoiceState { idle, picked, correct, wrong, dim }
 
 /// 보기 블록: 왼쪽 글자 네모 + 본문. 정답 lime / 오답 wrong / 나머지 흐림.
-class _ChoiceBlock extends StatelessWidget {
-  const _ChoiceBlock({
+class QuizChoiceBlock extends StatelessWidget {
+  const QuizChoiceBlock({
+    super.key,
     required this.letter,
     required this.text,
     required this.state,
@@ -239,24 +241,24 @@ class _ChoiceBlock extends StatelessWidget {
 
   final String letter;
   final String text;
-  final _ChoiceState state;
+  final QuizChoiceState state;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = switch (state) {
-      _ChoiceState.correct => AppColors.lime,
-      _ChoiceState.wrong => AppColors.wrong,
-      _ChoiceState.picked => AppColors.cyan,
-      _ChoiceState.idle || _ChoiceState.dim => AppColors.paper,
+      QuizChoiceState.correct => AppColors.lime,
+      QuizChoiceState.wrong => AppColors.wrong,
+      QuizChoiceState.picked => AppColors.cyan,
+      QuizChoiceState.idle || QuizChoiceState.dim => AppColors.paper,
     };
     final tag = switch (state) {
-      _ChoiceState.correct => '정답',
-      _ChoiceState.wrong => '내 답',
+      QuizChoiceState.correct => '정답',
+      QuizChoiceState.wrong => '내 답',
       _ => null,
     };
     return Opacity(
-      opacity: state == _ChoiceState.dim ? 0.55 : 1,
+      opacity: state == QuizChoiceState.dim ? 0.55 : 1,
       child: ChunkyCard(
         onTap: onTap,
         color: color,
