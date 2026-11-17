@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/bank/bank_tab.dart';
+import '../features/notebook/notebook_share_screen.dart';
 import '../features/room/lobby_screen.dart';
 import '../features/subjects/subject_list_screen.dart';
 import 'auth/auth_service.dart';
@@ -19,15 +20,27 @@ abstract final class AppRoutes {
   static const bank = '/bank';
   static const mock = '/mock';
   static const cards = '/cards';
+
+  /// 공유 족보 링크: `/share/ABC123`
+  static const sharePrefix = '/share/';
 }
 
 final appRouter = GoRouter(
   initialLocation: AppRoutes.lobby,
   // 로그인 전이면 로그인 화면으로, 로그인하면 로비로
   refreshListenable: authService,
-  redirect: (context, state) =>
-      loginRedirect(canEnter: authService.canEnter, at: state.matchedLocation),
+  redirect: (context, state) => loginRedirect(
+    canEnter: authService.canEnter,
+    at: state.matchedLocation,
+    next: state.uri.queryParameters['next'],
+  ),
   routes: [
+    GoRoute(
+      path: '${AppRoutes.sharePrefix}:code',
+      builder: (_, state) => NotebookShareScreen(
+        code: state.pathParameters['code']!.toUpperCase(),
+      ),
+    ),
     GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => AppShell(shell: shell),
@@ -87,8 +100,22 @@ class _ComingSoon extends StatelessWidget {
 }
 
 /// 로그인 여부에 따른 화면 이동. null이면 그대로.
-String? loginRedirect({required bool canEnter, required String at}) {
+/// 공유 족보 링크로 들어왔는데 로그인 전이면, 로그인한 뒤 그 링크로 돌아간다 ([next]).
+String? loginRedirect({
+  required bool canEnter,
+  required String at,
+  String? next,
+}) {
   final atLogin = at == AppRoutes.login;
-  if (!canEnter) return atLogin ? null : AppRoutes.login;
-  return atLogin ? AppRoutes.lobby : null;
+  if (!canEnter) {
+    if (atLogin) return null;
+    if (at.startsWith(AppRoutes.sharePrefix)) {
+      return '${AppRoutes.login}?next=${Uri.encodeComponent(at)}';
+    }
+    return AppRoutes.login;
+  }
+  if (!atLogin) return null;
+  return next != null && next.startsWith(AppRoutes.sharePrefix)
+      ? next
+      : AppRoutes.lobby;
 }

@@ -106,6 +106,17 @@ rooms/{roomId}/mockExams/{examId}        # 모의고사 기록 (A)
   wrongCardIds: [string]
   startedAt, submittedAt: timestamp
 
+shares/{code}                            # 공유 족보 (족보 내보내기 → 공유 링크). 문서 ID = 6자리 코드
+  ownerId, ownerNickname, subjectName: string
+  scope: "myVerified" | "myAll" | "room"
+  summaries: [{ week, label, summary }]  # 카드가 있는 주차의 자료 요약
+  cards: [{ week, type, question, choices, answer, explanation, concept,
+            sourceLabel, verified, author, votes? }]   # 보내는 순간의 카드 복사본 (원본 파일 없음)
+  cardCount: int                         # 500장까지
+  createdAt: timestamp
+  # 받는 사람: 내 과목에 cards로 복사(검수 상태 유지) + 주차마다 sources 하나(요약), 또는 PDF로 받기
+  # 보안 규칙: 로그인한 사람 누구나 읽기, 만들기는 ownerId == 본인
+
 rooms/{roomId}/answers/{round_uid}       # (B)
   uid, round: int
   choice: string

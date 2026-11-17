@@ -6,6 +6,7 @@ import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_button.dart';
 import '../../core/widgets/chunky_card.dart';
 import '../../core/widgets/stat_chip.dart';
+import '../notebook/notebook_share_screen.dart';
 import 'arcade_app_bar.dart';
 import 'subject_detail_screen.dart';
 import 'subject_form_sheet.dart';
@@ -56,6 +57,13 @@ class SubjectListScreen extends ConsumerWidget {
         ),
         children: [
           const ArcadeTitle(title: '내 과목', subtitle: '시험 볼 과목마다 카드를 모아요'),
+          const SizedBox(height: AppSpacing.md),
+          ChunkyButton(
+            label: '친구 족보 받기 (공유 코드)',
+            icon: Icons.move_to_inbox_rounded,
+            color: AppColors.cyan,
+            onPressed: () => showOpenShareDialog(context),
+          ),
           const SizedBox(height: AppSpacing.section),
           ...subjects.when(
             loading: () => const [

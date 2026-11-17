@@ -18,10 +18,23 @@ enum ExportScope {
 
   /// 이 과목 방에 올라온 카드 (친구 카드 포함, 투표 수 표시)
   room,
+
+  /// 친구가 공유 링크로 보낸 족보
+  shared,
 }
 
 /// 내보낼 카드 한 장. 방 카드면 [votes]·[author]가 있다.
 typedef ExportCard = ({QuizCard card, int? votes, String? author});
+
+/// 자료 요약 한 개 (주차·자료 이름·요약).
+typedef ExportSummary = ({int week, String label, String summary});
+
+/// 요약이 있는 자료만 [ExportSummary]로.
+List<ExportSummary> summariesOf(Iterable<StudySource> sources) => [
+  for (final s in sources)
+    if ((s.summary ?? '').trim().isNotEmpty)
+      (week: s.week, label: s.fileName, summary: s.summary!.trim()),
+];
 
 /// 주차 하나: 자료 요약 + 카드.
 typedef ExportWeek = ({
@@ -55,6 +68,7 @@ class NotebookExport {
     ExportScope.myVerified => '내 카드 (검수 완료)',
     ExportScope.myAll => '내 카드 (초안 포함)',
     ExportScope.room => '스터디 방 카드',
+    ExportScope.shared => '친구가 공유한 족보',
   };
 
   String get fileName {
@@ -70,14 +84,11 @@ class NotebookExport {
     required ExportScope scope,
     required bool withAnswers,
     required List<ExportCard> cards,
-    required List<StudySource> sources,
+    required List<ExportSummary> summaries,
     DateTime? now,
   }) {
     final byWeek = groupByWeek(cards, (c) => c.card.week);
-    final sourcesByWeek = groupByWeek(
-      sources.where((s) => (s.summary ?? '').trim().isNotEmpty),
-      (s) => s.week,
-    );
+    final sumByWeek = groupByWeek(summaries, (s) => s.week);
     return NotebookExport(
       subjectName: subjectName,
       scope: scope,
@@ -88,8 +99,8 @@ class NotebookExport {
           (
             week: e.key,
             summaries: [
-              for (final s in sourcesByWeek[e.key] ?? const <StudySource>[])
-                (label: s.fileName, summary: s.summary!.trim()),
+              for (final s in sumByWeek[e.key] ?? const <ExportSummary>[])
+                (label: s.label, summary: s.summary),
             ],
             cards: e.value,
           ),

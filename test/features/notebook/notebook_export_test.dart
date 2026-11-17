@@ -15,7 +15,7 @@ void main() {
           (card: mcq, votes: votes, author: votes == null ? null : '선우'),
           (card: ox, votes: null, author: null),
         ],
-        sources: const [],
+        summaries: const [],
         now: DateTime(2026, 11, 17),
       );
 
