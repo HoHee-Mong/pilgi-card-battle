@@ -11,6 +11,7 @@ import '../cards/card_providers.dart';
 import '../subjects/arcade_app_bar.dart';
 import 'solo_model.dart';
 import 'solo_play_screen.dart';
+import 'solo_providers.dart';
 
 /// 혼자 풀기 설정: 범위(주차)·유형·문항 수 → 시작.
 class SoloSetupScreen extends ConsumerStatefulWidget {
@@ -48,6 +49,9 @@ class _SoloSetupScreenState extends ConsumerState<SoloSetupScreen> {
         ref.watch(myCardsProvider((subjectId: subject.id, week: null))).value ??
         const <QuizCard>[];
     final pool = _includeDrafts ? all : all.where((c) => c.isVerified).toList();
+    final lastSolved = lastSolvedAt(
+      ref.watch(subjectAttemptsProvider(subject.id)).value ?? const [],
+    );
     final weeksAvailable = {for (final c in pool) c.week}.toList()..sort();
     final ready = buildQuizSet(
       pool,
@@ -55,6 +59,12 @@ class _SoloSetupScreenState extends ConsumerState<SoloSetupScreen> {
       types: _types,
       count: 0,
     ).length;
+    final unsolved = countUnsolved(
+      pool,
+      weeks: _weeks,
+      types: _types,
+      lastSolved: lastSolved,
+    );
     final willAsk = _count <= 0 ? ready : (ready < _count ? ready : _count);
 
     return Scaffold(
@@ -80,6 +90,7 @@ class _SoloSetupScreenState extends ConsumerState<SoloSetupScreen> {
                     weeks: _weeks,
                     types: _types,
                     count: _count,
+                    lastSolved: lastSolved,
                   ),
                 ),
         ),
@@ -161,7 +172,18 @@ class _SoloSetupScreenState extends ConsumerState<SoloSetupScreen> {
             onSelected: (on) => setState(() => _includeDrafts = on),
           ),
           const SizedBox(height: AppSpacing.section),
-          Text('조건에 맞는 카드 $ready장 · 섞어서 냅니다', style: AppTextStyles.label),
+          Text(
+            '조건에 맞는 카드 $ready장 · 안 푼 문제 $unsolved장',
+            style: AppTextStyles.label,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            unsolved >= willAsk
+                ? '안 푼 문제부터 냅니다. 보기 순서도 매번 섞어요.'
+                : '안 푼 문제를 먼저 내고, 모자라면 오래전에 푼 문제로 채워요. '
+                      '새 문제를 원하면 카드를 더 만들어 보세요.',
+            style: AppTextStyles.label,
+          ),
         ],
       ),
     );

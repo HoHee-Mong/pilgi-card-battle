@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pilgi_card_battle/core/models/attempt.dart';
 import 'package:pilgi_card_battle/core/models/card.dart';
 import 'package:pilgi_card_battle/features/solo/solo_model.dart';
 
@@ -44,6 +45,54 @@ void main() {
         random: Random(1),
       );
       expect(set, hasLength(2));
+    });
+
+    test('안 푼 카드 먼저, 그다음 오래전에 푼 카드', () {
+      final now = DateTime(2026, 11, 17);
+      final set = buildQuizSet(
+        pool,
+        weeks: {},
+        types: CardType.values.toSet(),
+        count: 2,
+        lastSolved: {
+          'a': now,
+          'b': now.subtract(const Duration(days: 3)),
+          'c': now.subtract(const Duration(days: 1)),
+        },
+        random: Random(2),
+      );
+      // d는 안 풂, b는 가장 오래전에 풂
+      expect(set.map((c) => c.id), unorderedEquals(['d', 'b']));
+    });
+
+    test('객관식 보기 순서를 섞어도 보기·정답은 그대로', () {
+      final card = pool[0];
+      final seen = <String>{};
+      for (var i = 0; i < 20; i++) {
+        final s = shuffleChoices(card, Random(i));
+        expect(s.choices, unorderedEquals(card.choices));
+        expect(isCorrectAnswer(s, card.answer), isTrue);
+        seen.add(s.choices.join('|'));
+      }
+      expect(seen.length, greaterThan(1));
+    });
+
+    test('lastSolvedAt은 카드마다 가장 최근 기록', () {
+      final t1 = DateTime(2026, 11, 1);
+      final t2 = DateTime(2026, 11, 5);
+      Attempt at(String id, DateTime t) => Attempt(
+        id: '$id$t',
+        cardId: id,
+        subjectId: 's',
+        concept: '',
+        correct: true,
+        mode: AttemptMode.solo,
+        at: t,
+      );
+      expect(lastSolvedAt([at('a', t1), at('a', t2), at('b', t1)]), {
+        'a': t2,
+        'b': t1,
+      });
     });
   });
 
