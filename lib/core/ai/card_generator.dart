@@ -71,7 +71,7 @@ class CardGenerator {
 
   final GenerativeModel _model;
 
-  static const modelName = 'gemini-2.5-flash';
+  static const modelName = 'gemini-3.8-flash';
 
   static GenerativeModel defaultModel() {
     return FirebaseAI.googleAI().generativeModel(
