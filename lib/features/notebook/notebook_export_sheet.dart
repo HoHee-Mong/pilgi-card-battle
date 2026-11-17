@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/auth/auth_providers.dart';
+import '../../core/auth/user_profile.dart';
 import '../../core/models/subject.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/chunky_button.dart';
@@ -9,6 +11,7 @@ import '../../fx/haptics.dart';
 import '../cards/card_providers.dart';
 import 'notebook_export.dart';
 import 'notebook_providers.dart';
+import 'notebook_share.dart';
 
 /// 족보 내보내기: 범위·정답 포함을 골라 PDF(저장·공유) 또는 텍스트(복사)로.
 Future<void> showNotebookExportSheet(BuildContext context, Subject subject) {
@@ -41,6 +44,7 @@ class _ExportFormState extends ConsumerState<_ExportForm> {
   bool _withAnswers = true;
   bool _busy = false;
   String? _message;
+  NotebookShare? _shared;
 
   Future<NotebookExport> _build() async {
     final id = widget.subject.id;
@@ -71,7 +75,7 @@ class _ExportFormState extends ConsumerState<_ExportForm> {
       scope: _scope,
       withAnswers: _withAnswers,
       cards: cards,
-      sources: sources,
+      summaries: summariesOf(sources),
     );
   }
 
@@ -98,6 +102,36 @@ class _ExportFormState extends ConsumerState<_ExportForm> {
     await e.sharePdf();
     Haptics.light();
     return 'PDF를 만들었어요 (문제 ${e.cardCount}개). 저장하거나 친구에게 보내세요.';
+  }
+
+  /// 공유 링크: 카드 본문·정답·해설을 통째로 복사해 둔다 (받는 사람이 카드로 가져가야 하므로
+  /// "정답·해설 넣기"와 상관없이 항상 넣는다).
+  Future<String> _link(NotebookExport e) async {
+    final uid = ref.read(uidProvider);
+    if (uid == null) return '로그인이 필요해요.';
+    final nickname = await ref
+        .read(userProfileRepositoryProvider)
+        .ensureNickname(uid);
+    final sources = await ref.read(
+      subjectSourcesProvider(widget.subject.id).future,
+    );
+    final share = await ref
+        .read(shareRepositoryProvider)
+        .create(
+          uid: uid,
+          nickname: nickname,
+          export: e,
+          summaries: summariesOf(sources),
+        );
+    Haptics.light();
+    if (mounted) setState(() => _shared = share);
+    return '공유 링크를 만들었어요 (문제 ${share.cards.length}개). 친구에게 보내 주세요.';
+  }
+
+  Future<void> _copy(String text, String what) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    Haptics.light();
+    if (mounted) setState(() => _message = '$what 복사했어요.');
   }
 
   Future<String> _text(NotebookExport e) async {
@@ -156,16 +190,78 @@ class _ExportFormState extends ConsumerState<_ExportForm> {
         ),
         const SizedBox(height: AppSpacing.sm),
         ChunkyButton(
+          label: '공유 링크 만들기 (친구가 가져가기)',
+          icon: Icons.link_rounded,
+          color: AppColors.cyan,
+          onPressed: _busy ? null : () => _run(_link),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ChunkyButton(
           label: '텍스트로 복사',
           icon: Icons.copy_rounded,
           color: AppColors.paper,
           onPressed: _busy ? null : () => _run(_text),
         ),
+        if (_shared != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          _ShareResult(share: _shared!, onCopy: _copy),
+        ],
         if (_message != null) ...[
           const SizedBox(height: AppSpacing.md),
           Text(_message!, style: AppTextStyles.bodyS),
         ],
       ],
+    );
+  }
+}
+
+/// 만든 공유 코드·링크와 복사 버튼.
+class _ShareResult extends StatelessWidget {
+  const _ShareResult({required this.share, required this.onCopy});
+
+  final NotebookShare share;
+  final Future<void> Function(String text, String what) onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final link = shareLinkFor(share.code);
+    final invite = [
+      '📒 ${share.subjectName} 족보를 공유했어요 (문제 ${share.cards.length}개)',
+      ?link,
+      '필기 카드 배틀 → 내 카드 → "친구 족보 받기"에 코드 ${share.code} 입력',
+    ].join('\n');
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.paper,
+        borderRadius: BorderRadius.circular(AppRadius.chip),
+        border: Border.all(color: AppColors.ink, width: AppBlock.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('공유 코드', style: AppTextStyles.label),
+          SelectableText(share.code, style: AppTextStyles.titleL),
+          if (link != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            SelectableText(link, style: AppTextStyles.bodyS),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          ChunkyButton(
+            label: '친구에게 보낼 글 복사',
+            icon: Icons.send_rounded,
+            onPressed: () => onCopy(invite, '보낼 글을'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ChunkyButton(
+            label: link != null ? '링크만 복사' : '코드만 복사',
+            icon: Icons.copy_rounded,
+            color: AppColors.paper,
+            onPressed: () =>
+                onCopy(link ?? share.code, link != null ? '링크를' : '코드를'),
+          ),
+        ],
+      ),
     );
   }
 }
