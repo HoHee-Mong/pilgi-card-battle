@@ -269,7 +269,7 @@ class CardGenerator {
         ]),
       ]);
     } on FirebaseAIException catch (e) {
-      throw CardGenerationException('AI 호출에 실패했어요: ${e.message}');
+      throw CardGenerationException(friendlyError(e.message));
     }
     final text = response.text;
     if (text == null || text.trim().isEmpty) {
@@ -284,6 +284,26 @@ class CardGenerator {
       );
     }
     return result;
+  }
+
+  /// AI 오류 메시지를 사용자용 문장으로. (붐빔·시간 초과는 다시 시도하면 되는 경우가 많다)
+  static String friendlyError(String message) {
+    final m = message.toLowerCase();
+    if (m.contains('high demand') ||
+        m.contains('overloaded') ||
+        m.contains('unavailable') ||
+        m.contains('try again later')) {
+      return 'AI가 지금 너무 붐벼요. 잠시 후 다시 시도해 주세요.';
+    }
+    if (m.contains('deadline') ||
+        m.contains('timeout') ||
+        m.contains('timed out')) {
+      return 'AI 응답이 너무 오래 걸렸어요. 잠시 후 다시 시도하거나 더 짧은 자료로 올려 주세요.';
+    }
+    if (m.contains('quota') || m.contains('resource_exhausted')) {
+      return '오늘 AI 사용량이 많아요. 잠시 후 다시 시도해 주세요.';
+    }
+    return 'AI 호출에 실패했어요: $message';
   }
 
   /// 응답 JSON → 결과. 규칙에 어긋나는 카드(보기 수, 정답 불일치 등)는 버린다.
